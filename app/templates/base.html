@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}设备管理系统{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {'50':'#eff6ff','100':'#dbeafe','200':'#bfdbfe','300':'#93c5fd','400':'#60a5fa','500':'#3b82f6','600':'#2563eb','700':'#1d4ed8','800':'#1e40af','900':'#1e3a8a'}
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gray-50">
+  <div x-data="{ sidebarOpen: false, mobileTab: 'devices' }" class="min-h-screen flex flex-col lg:flex-row">
+
+    <!-- Mobile header -->
+    <header class="lg:hidden bg-white border-b px-4 py-3 flex items-center justify-between shadow-sm">
+      <button @click="sidebarOpen = !sidebarOpen" class="text-gray-600 p-2 -ml-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <span class="font-semibold text-gray-800">设备管理系统</span>
+      <div class="w-10"></div>
+    </header>
+
+    <!-- Sidebar overlay -->
+    <div x-show="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 bg-black/30 z-20 lg:hidden"></div>
+
+    <!-- Sidebar (PC) -->
+    <aside class="fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white border-r shadow-sm transform transition-transform duration-200 lg:transform-none"
+           :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
+      <div class="hidden lg:flex h-16 items-center px-6 border-b">
+        <span class="font-bold text-lg text-primary-700">设备管理系统</span>
+      </div>
+      <nav class="p-4 space-y-1 mt-2 lg:mt-0">
+        <a href="/" class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors {{ 'bg-primary-50 text-primary-700 font-medium' if request.url.path == '/' else 'text-gray-600 hover:bg-gray-100' }}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <span>仪表盘</span>
+        </a>
+        <a href="/devices" class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors {{ 'bg-primary-50 text-primary-700 font-medium' if request.url.path.startswith('/devices') else 'text-gray-600 hover:bg-gray-100' }}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <span>设备管理</span>
+        </a>
+        <a href="/locations" class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors {{ 'bg-primary-50 text-primary-700 font-medium' if request.url.path.startswith('/locations') else 'text-gray-600 hover:bg-gray-100' }}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>位置管理</span>
+        </a>
+        <a href="/energy" class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors {{ 'bg-primary-50 text-primary-700 font-medium' if request.url.path == '/energy' else 'text-gray-600 hover:bg-gray-100' }}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <span>能耗计算</span>
+        </a>
+        <a href="/energy/multi" class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors {{ 'bg-primary-50 text-primary-700 font-medium' if request.url.path == '/energy/multi' else 'text-gray-600 hover:bg-gray-100' }}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>多联机能耗</span>
+        </a>
+        <hr class="my-2 border-gray-200">
+        <a href="/types" class="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors {{ 'bg-primary-50 text-primary-700 font-medium' if request.url.path == '/types' else 'text-gray-600 hover:bg-gray-100' }}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>类型管理</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 p-4 lg:p-8 pb-20 lg:pb-8 min-h-screen overflow-x-hidden">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- Mobile bottom tab bar -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t lg:hidden z-10">
+      <div class="flex justify-around items-center h-16">
+        <a href="/" class="flex flex-col items-center gap-0.5 px-3 py-1 text-xs {{ 'text-primary-600' if request.url.path == '/' else 'text-gray-500' }}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <span>仪表盘</span>
+        </a>
+        <a href="/devices" class="flex flex-col items-center gap-0.5 px-3 py-1 text-xs {{ 'text-primary-600' if request.url.path.startswith('/devices') else 'text-gray-500' }}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          <span>设备</span>
+        </a>
+        <a href="/locations" class="flex flex-col items-center gap-0.5 px-3 py-1 text-xs {{ 'text-primary-600' if request.url.path.startswith('/locations') else 'text-gray-500' }}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>位置</span>
+        </a>
+        <a href="/energy" class="flex flex-col items-center gap-0.5 px-3 py-1 text-xs {{ 'text-primary-600' if request.url.path == '/energy' else 'text-gray-500' }}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          <span>能耗</span>
+        </a>
+        <a href="/energy/multi" class="flex flex-col items-center gap-0.5 px-3 py-1 text-xs {{ 'text-primary-600' if request.url.path == '/energy/multi' else 'text-gray-500' }}">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>多联机</span>
+        </a>
+      </div>
+    </nav>
+    </nav>
+  </div>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>
