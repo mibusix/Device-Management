@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import date
 from app.database import get_db
 from app.models import Device, DeviceFieldValue, DeviceStatus
 
@@ -16,7 +15,7 @@ class DeviceCreate(BaseModel):
     sub_location_id: int
     status: str = "正常"
     power_rating: float = 0
-    purchase_date: Optional[str] = None
+
     notes: str = ""
     field_values: dict = {}
 
@@ -70,9 +69,7 @@ def create_device(data: DeviceCreate, db: Session = Depends(get_db)):
         sub_location_id=data.sub_location_id,
         status=data.status or DeviceStatus.NORMAL.value,
         power_rating=data.power_rating,
-        purchase_date=(
-            date.fromisoformat(data.purchase_date) if data.purchase_date else None
-        ),
+
         notes=data.notes,
     )
     db.add(device)
@@ -99,9 +96,7 @@ def update_device(device_id: int, data: DeviceUpdate, db: Session = Depends(get_
     device.sub_location_id = data.sub_location_id
     device.status = data.status
     device.power_rating = data.power_rating
-    device.purchase_date = (
-        date.fromisoformat(data.purchase_date) if data.purchase_date else None
-    )
+
     device.notes = data.notes
 
     db.query(DeviceFieldValue).filter(
@@ -175,3 +170,48 @@ def get_sub_location(sub_id: int, db: Session = Depends(get_db)):
     if not sl:
         raise HTTPException(404)
     return {"id": sl.id, "name": sl.name, "area_id": sl.area_id, "area_name": sl.area.name}
+
+
+@router.get("/multi-split/devices")
+def get_multi_split_devices(
+    type_id: int,
+    area_id: int = None,
+    sub_id: int = None,
+    status: str = None,
+    search: str = "",
+    db: Session = Depends(get_db),
+):
+    q = db.query(Device).filter(Device.device_type_id == type_id)
+    if area_id:
+        sub_ids = [sl.id for sl in db.query(SubLocation).filter(SubLocation.area_id == area_id).all()]
+        q = q.filter(Device.sub_location_id.in_(sub_ids)) if sub_ids else q
+    if sub_id:
+        q = q.filter(Device.sub_location_id == sub_id)
+    if status:
+        q = q.filter(Device.status == status)
+    if search:
+        q = q.filter(
+            Device.name.contains(search) |
+            Device.notes.contains(search)
+        )
+
+    devices = q.order_by(Device.id.desc()).all()
+    result = []
+    for d in devices:
+        fields = {}
+        for fv in d.field_values:
+            fields[fv.field.field_name] = fv.value
+        result.append({
+            "id": d.id,
+            "name": d.name,
+            "device_type_id": d.device_type_id,
+            "area_id": d.sub_location.area_id,
+            "area": d.sub_location.area.name,
+            "sub_location_id": d.sub_location_id,
+            "sub_location": d.sub_location.name,
+            "status": d.status,
+            "power_rating": d.power_rating,
+            "notes": d.notes,
+            "fields": fields,
+        })
+    return result

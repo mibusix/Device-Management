@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from app.database import engine, Base
+from app.database import init_db
 from app.routers import pages, devices, locations, types_api, energy
 import os
 
-Base.metadata.create_all(bind=engine)
+init_db()
 
 app = FastAPI(title="设备管理系统")
 

@@ -15,12 +15,15 @@ templates = Jinja2Templates(directory="app/templates")
 
 @router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db)):
-    devices = db.query(Device).count()
-    normal = db.query(Device).filter(Device.status == DeviceStatus.NORMAL.value).count()
-    fault = db.query(Device).filter(Device.status == DeviceStatus.FAULT.value).count()
-    scrapped = db.query(Device).filter(Device.status == DeviceStatus.SCRAPPED.value).count()
+    multi_type = db.query(DeviceType).filter(DeviceType.name == "多联机").first()
+    multi_id = multi_type.id if multi_type else -1
 
-    all_types = db.query(DeviceType).all()
+    devices = db.query(Device).filter(Device.device_type_id != multi_id).count()
+    normal = db.query(Device).filter(Device.device_type_id != multi_id, Device.status == DeviceStatus.NORMAL.value).count()
+    fault = db.query(Device).filter(Device.device_type_id != multi_id, Device.status == DeviceStatus.FAULT.value).count()
+    scrapped = db.query(Device).filter(Device.device_type_id != multi_id, Device.status == DeviceStatus.SCRAPPED.value).count()
+
+    all_types = db.query(DeviceType).filter(DeviceType.name != "多联机").all()
     type_stats = []
     for t in all_types:
         total = db.query(Device).filter(Device.device_type_id == t.id).count()
@@ -46,6 +49,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         .scalar() or 0
     )
     multi_energy = db.query(func.sum(MultiSplitEnergy.energy_kwh)).scalar() or 0
+    multi_count = db.query(Device).filter(Device.device_type_id == multi_id).count()
 
     return templates.TemplateResponse(request, "dashboard.html", {
         "total": devices,
@@ -56,6 +60,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         "area_data": area_data,
         "other_energy": round(normal_devices_energy, 2),
         "multi_energy": round(multi_energy, 2),
+        "multi_count": multi_count,
     })
 
 
@@ -68,9 +73,14 @@ def device_list(
     search: str = "",
     db: Session = Depends(get_db),
 ):
+    multi_type = db.query(DeviceType).filter(DeviceType.name == "多联机").first()
+    multi_id = multi_type.id if multi_type else -1
+
     q = db.query(Device)
     if type_id:
         q = q.filter(Device.device_type_id == type_id)
+    else:
+        q = q.filter(Device.device_type_id != multi_id)
     if status:
         q = q.filter(Device.status == status)
     if area_id:
@@ -80,7 +90,7 @@ def device_list(
         q = q.filter(Device.name.contains(search))
 
     devices = q.order_by(Device.id.desc()).all()
-    all_types = db.query(DeviceType).all()
+    all_types = db.query(DeviceType).filter(DeviceType.name != "多联机").all()
     all_areas = db.query(Area).all()
 
     return templates.TemplateResponse(request, "devices/list.html", {
@@ -150,19 +160,10 @@ def energy_page(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/energy/multi", response_class=HTMLResponse)
-def energy_multi_page(request: Request, db: Session = Depends(get_db)):
-    mt = db.query(DeviceType).filter(DeviceType.name == "多联机").first()
-    types = [mt] if mt else []
-    records = (
-        db.query(MultiSplitEnergy)
-        .order_by(MultiSplitEnergy.created_at.desc())
-        .limit(100)
-        .all()
-    )
-    return templates.TemplateResponse(request, "energy/list.html", {
-        "types": types,
-        "records": records,
-        "multi": True,
+def multi_split_page(request: Request, db: Session = Depends(get_db)):
+    areas = db.query(Area).all()
+    return templates.TemplateResponse(request, "devices/multi_split.html", {
+        "areas": areas,
     })
 
 

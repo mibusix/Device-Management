@@ -78,7 +78,7 @@ class Device(Base):
     sub_location_id = Column(Integer, ForeignKey("sub_locations.id"), nullable=False)
     status = Column(String(20), default=DeviceStatus.NORMAL.value)
     power_rating = Column(Float, default=0)
-    purchase_date = Column(Date, nullable=True)
+
     notes = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.now)
 

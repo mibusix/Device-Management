@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% block title %}多联机管理{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto" x-data="multiSplitManager()">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">多联机管理</h1>
+    <div class="flex items-center gap-2">
+      <button @click="showAddForm" class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        添加多联机
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-white rounded-xl shadow-sm border p-4 mb-6">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">大区域</label>
+        <select x-model="filter.area_id" @change="loadDevices" class="w-full px-3 py-2 border rounded-lg text-sm">
+          <option value="">全部</option>
+          {% for a in areas %}
+          <option value="{{ a.id }}">{{ a.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">小区域</label>
+        <select x-model="filter.sub_location_id" @change="loadDevices" class="w-full px-3 py-2 border rounded-lg text-sm">
+          <option value="">全部</option>
+          <template x-for="sl in filterSubLocations" :key="sl.id">
+            <option :value="sl.id" x-text="sl.name"></option>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">状态</label>
+        <select x-model="filter.status" @change="loadDevices" class="w-full px-3 py-2 border rounded-lg text-sm">
+          <option value="">全部</option>
+          <option value="正常">正常</option>
+          <option value="故障">故障</option>
+          <option value="报废">报废</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">搜索</label>
+        <input type="text" x-model="filter.search" @input.debounce="loadDevices" placeholder="编号/型号" class="w-full px-3 py-2 border rounded-lg text-sm">
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop table -->
+  <div class="bg-white rounded-xl shadow-sm border overflow-hidden hidden md:block">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50 border-b">
+          <tr>
+            <template x-for="f in multiTypeFields" :key="f.id">
+              <th class="text-left px-4 py-3 text-xs font-medium text-gray-500" x-text="f.name"></th>
+            </template>
+            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500">大区域</th>
+            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500">小区域</th>
+            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500">状态</th>
+            <th class="text-right px-4 py-3 text-xs font-medium text-gray-500">操作</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          <template x-for="d in devices" :key="d.id">
+            <tr class="hover:bg-gray-50">
+              <template x-for="f in multiTypeFields" :key="f.id">
+                <td class="px-4 py-3 text-sm text-gray-600" x-text="d.fields[f.name] || '-'"></td>
+              </template>
+              <td class="px-4 py-3 text-sm text-gray-600" x-text="d.area"></td>
+              <td class="px-4 py-3 text-sm text-gray-600" x-text="d.sub_location"></td>
+              <td class="px-4 py-3">
+                <span x-show="d.status == '正常'" class="inline-flex px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">正常</span>
+                <span x-show="d.status == '故障'" class="inline-flex px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">故障</span>
+                <span x-show="d.status == '报废'" class="inline-flex px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">报废</span>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <button @click="editDevice(d)" class="text-sm text-primary-600 hover:text-primary-700 mr-3">编辑</button>
+                <button @click="deleteDevice(d.id, Object.values(d.fields).filter(Boolean).join('/'))" class="text-sm text-red-600 hover:text-red-700">删除</button>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="devices.length === 0">
+            <td :colspan="multiTypeFields.length + 4" class="px-4 py-12 text-center text-gray-400">暂无多联机设备</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Mobile cards -->
+  <div class="md:hidden space-y-3">
+    <template x-for="d in devices" :key="d.id">
+      <div class="bg-white rounded-xl shadow-sm border p-4">
+        <div class="flex items-start justify-between mb-2">
+          <div>
+            <span class="font-medium text-gray-800" x-text="d.fields[multiTypeFields[0]?.name] || d.name"></span>
+          </div>
+          <span x-show="d.status == '正常'" class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">正常</span>
+          <span x-show="d.status == '故障'" class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">故障</span>
+          <span x-show="d.status == '报废'" class="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">报废</span>
+        </div>
+        <div class="text-sm text-gray-500 space-y-1">
+          <template x-for="f in multiTypeFields" :key="f.id">
+            <div x-show="d.fields[f.name]"><span x-text="f.name + ': '" class="text-gray-400"></span><span x-text="d.fields[f.name]"></span></div>
+          </template>
+          <div>位置: <span x-text="d.area + ' → ' + d.sub_location"></span></div>
+        </div>
+        <div class="flex gap-3 mt-3 pt-3 border-t text-sm">
+          <button @click="editDevice(d)" class="text-primary-600">编辑</button>
+          <button @click="deleteDevice(d.id, Object.values(d.fields).filter(Boolean).join('/'))" class="text-red-600">删除</button>
+        </div>
+      </div>
+    </template>
+    <div x-show="devices.length === 0" class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">暂无多联机设备</div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div x-show="showModal" class="fixed inset-0 bg-black/30 flex items-start justify-center z-50 pt-10 overflow-y-auto" @click.self="showModal = false">
+    <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl mx-4 my-4">
+      <h3 class="font-semibold text-lg mb-4" x-text="editingId ? '编辑多联机' : '添加多联机'"></h3>
+      <div class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- 动态自定义字段 -->
+          <template x-for="f in fields" :key="f.id">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                <span x-text="f.name"></span>
+                <span x-show="f.unit" class="text-gray-400" x-text="`(${f.unit})`"></span>
+                <span x-show="f.required" class="text-red-500">*</span>
+              </label>
+              <template x-if="f.type == 'number'">
+                <input type="number" step="0.01" x-model="fieldValues[f.id]" class="w-full px-3 py-2 border rounded-lg text-sm">
+              </template>
+              <template x-if="f.type != 'number'">
+                <input type="text" x-model="fieldValues[f.id]" class="w-full px-3 py-2 border rounded-lg text-sm">
+              </template>
+            </div>
+          </template>
+          <!-- 位置 -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">大区域 <span class="text-red-500">*</span></label>
+            <select x-model="form.area_id" @change="onAreaChange" required class="w-full px-3 py-2 border rounded-lg text-sm">
+              <option value="">选择大区域</option>
+              {% for a in areas %}
+              <option value="{{ a.id }}">{{ a.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">小区域 <span class="text-red-500">*</span></label>
+            <select x-model="form.sub_location_id" required class="w-full px-3 py-2 border rounded-lg text-sm">
+              <option value="">选择小区域</option>
+              <template x-for="sl in subLocations" :key="sl.id">
+                <option :value="sl.id" x-text="sl.name"></option>
+              </template>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">状态</label>
+            <select x-model="form.status" class="w-full px-3 py-2 border rounded-lg text-sm">
+              <option value="正常">正常</option>
+              <option value="故障">故障</option>
+              <option value="报废">报废</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">额定功率 (W)</label>
+            <input type="number" step="0.01" x-model="form.power_rating" class="w-full px-3 py-2 border rounded-lg text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+          <textarea x-model="form.notes" rows="2" class="w-full px-3 py-2 border rounded-lg text-sm"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button @click="showModal = false" class="px-4 py-2 border rounded-lg text-sm">取消</button>
+        <button @click="saveDevice()" class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function multiSplitManager() {
+  return {
+    devices: [],
+    filter: { area_id: '', sub_location_id: '', status: '', search: '' },
+    filterSubLocations: [],
+    showModal: false,
+    editingId: null,
+    multiTypeId: null,
+    multiTypeFields: [],
+    subLocations: [],
+    fields: [],
+    fieldValues: {},
+    form: {
+      area_id: '',
+      sub_location_id: '',
+      status: '正常',
+      power_rating: '',
+      notes: '',
+    },
+    showName: '',
+
+    async init() {
+      const r = await fetch('/api/devices/types');
+      const types = await r.json();
+      const mt = types.find(t => t.name === '多联机');
+      if (mt) {
+        this.multiTypeId = mt.id;
+        this.multiTypeFields = mt.fields || [];
+        this.loadDevices();
+      }
+    },
+
+    async loadDevices() {
+      let url = `/api/devices/multi-split/devices?type_id=${this.multiTypeId}`;
+      if (this.filter.area_id) url += `&area_id=${this.filter.area_id}`;
+      if (this.filter.sub_location_id) url += `&sub_id=${this.filter.sub_location_id}`;
+      if (this.filter.status) url += `&status=${this.filter.status}`;
+      if (this.filter.search) url += `&search=${encodeURIComponent(this.filter.search)}`;
+      const r = await fetch(url);
+      this.devices = await r.json();
+    },
+
+    showAddForm() {
+      this.editingId = null;
+      this.fields = [...this.multiTypeFields];
+      this.fieldValues = {};
+      this.form = { area_id: '', sub_location_id: '', status: '正常', power_rating: '', notes: '' };
+      this.subLocations = [];
+      this.showName = '';
+      this.showModal = true;
+    },
+
+    async editDevice(d) {
+      this.editingId = d.id;
+      this.fields = [...this.multiTypeFields];
+      this.fieldValues = {};
+      // map field values using field IDs
+      for (const f of this.fields) {
+        this.fieldValues[f.id] = d.fields[f.name] || '';
+      }
+      this.form = {
+        area_id: d.area_id,
+        sub_location_id: d.sub_location_id,
+        status: d.status,
+        power_rating: d.power_rating || '',
+        notes: d.notes || '',
+      };
+      this.showName = d.fields.编号 || d.name || '';
+      if (this.form.area_id) {
+        const lr = await fetch('/api/devices/locations');
+        const areas = await lr.json();
+        const a = areas.find(x => x.id == this.form.area_id);
+        this.subLocations = a ? (a.sub_locations || []) : [];
+      }
+      this.showModal = true;
+    },
+
+    onAreaChange() {
+      this.form.sub_location_id = '';
+      if (!this.form.area_id) { this.subLocations = []; return; }
+      fetch('/api/devices/locations').then(r => r.json()).then(areas => {
+        const a = areas.find(x => x.id == this.form.area_id);
+        this.subLocations = a ? (a.sub_locations || []) : [];
+      });
+    },
+
+    async saveDevice() {
+      if (!this.form.area_id || !this.form.sub_location_id) {
+        alert('请选择位置');
+        return;
+      }
+      // check required fields
+      for (const f of this.fields) {
+        if (f.required && !this.fieldValues[f.id]) {
+          alert(`请填写「${f.name}」`);
+          return;
+        }
+      }
+      // pick a display name from first filled field
+      let name = '';
+      for (const f of this.fields) {
+        if (this.fieldValues[f.id]) { name = this.fieldValues[f.id]; break; }
+      }
+      const payload = {
+        name: name || '多联机',
+        device_type_id: this.multiTypeId,
+        sub_type_id: null,
+        sub_location_id: parseInt(this.form.sub_location_id),
+        status: this.form.status,
+        power_rating: parseFloat(this.form.power_rating) || 0,
+        purchase_date: null,
+        notes: this.form.notes,
+        field_values: this.fieldValues,
+      };
+
+      const url = this.editingId ? `/api/devices/${this.editingId}` : '/api/devices/';
+      const method = this.editingId ? 'PUT' : 'POST';
+
+      const r = await fetch(url, {
+        method,
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
+      });
+      const data = await r.json();
+      if (data.ok) {
+        this.showModal = false;
+        this.loadDevices();
+      } else {
+        alert('保存失败');
+      }
+    },
+
+    deleteDevice(id, name) {
+      if (confirm(`确定删除此设备吗？`)) {
+        fetch(`/api/devices/${id}`, { method: 'DELETE' })
+          .then(r => r.json()).then(() => this.loadDevices());
+      }
+    }
+  }
+}
+</script>
+{% endblock %}
