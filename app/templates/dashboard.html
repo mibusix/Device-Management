@@ -52,7 +52,7 @@
       <h2 class="font-semibold text-gray-700 mb-4">按区域统计</h2>
       <div class="space-y-3">
         {% for item in area_data %}
-        <a href="/devices?area_id={{ item.area_id | default('') }}" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-primary-50 transition-colors">
+        <a href="/devices?area_id={{ item.area_id }}" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-primary-50 transition-colors">
           <span class="font-medium text-gray-700">{{ item.name }}</span>
           <span class="text-sm text-gray-500">{{ item.count }} 台设备</span>
         </a>

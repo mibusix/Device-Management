@@ -31,14 +31,14 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             n = db.query(Device).filter(
                 Device.device_type_id == t.id, Device.status == DeviceStatus.NORMAL.value
             ).count()
-            type_stats.append({"name": t.name, "total": total, "normal": n})
+            type_stats.append({"name": t.name, "total": total, "normal": n, "type_id": t.id})
 
     areas = db.query(Area).all()
     area_data = []
     for a in areas:
         ids = [sl.id for sl in a.sub_locations]
         cnt = db.query(Device).filter(Device.sub_location_id.in_(ids)).count() if ids else 0
-        area_data.append({"name": a.name, "count": cnt})
+        area_data.append({"name": a.name, "count": cnt, "area_id": a.id})
 
     normal_devices_energy = (
         db.query(func.sum(EnergyRecord.energy_kwh))
