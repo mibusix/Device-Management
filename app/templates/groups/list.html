@@ -385,7 +385,11 @@ function groupManager() {
           field_values: {...fv},
         };
         if (this.deviceForm.area_id) {
-          this.onAreaChange();
+          // load area name into subLocations so onAreaChange can find it
+          fetch('/api/devices/locations').then(r => r.json()).then(areas => {
+            const a = areas.find(x => x.id == this.deviceForm.area_id);
+            if (a) this.subLocations = a.sub_locations || [];
+          });
         } else {
           this.subLocations = [];
         }
@@ -411,6 +415,7 @@ function groupManager() {
       }
       const payload = {
         group_id: group.id,
+        area_id: this.deviceForm.area_id ? parseInt(this.deviceForm.area_id) : null,
         sub_location_id: this.deviceForm.sub_location_id ? parseInt(this.deviceForm.sub_location_id) : null,
         status: this.deviceForm.status,
         power_rating: parseFloat(this.deviceForm.power_rating) || 0,

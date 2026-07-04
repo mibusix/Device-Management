@@ -162,6 +162,7 @@ class GroupDevice(Base):
     __tablename__ = "group_devices"
     id = Column(Integer, primary_key=True, index=True)
     group_id = Column(Integer, ForeignKey("device_groups.id"), nullable=False)
+    area_id = Column(Integer, ForeignKey("areas.id"), nullable=True)
     sub_location_id = Column(Integer, ForeignKey("sub_locations.id"), nullable=True)
     status = Column(String(20), default="正常")
     power_rating = Column(Float, default=0)
@@ -170,4 +171,5 @@ class GroupDevice(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     group = relationship("DeviceGroup", back_populates="devices")
+    area = relationship("Area")
     sub_location = relationship("SubLocation")

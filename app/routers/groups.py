@@ -24,6 +24,7 @@ class FieldCreate(BaseModel):
 
 class DeviceCreate(BaseModel):
     group_id: int
+    area_id: Optional[int] = None
     sub_location_id: Optional[int] = None
     status: str = "正常"
     power_rating: float = 0
@@ -133,12 +134,14 @@ def list_group_devices(group_id: int, db: Session = Depends(get_db)):
     result = []
     for d in devices:
         fv = d.field_values or {}
+        aid = d.area_id or (d.sub_location.area_id if d.sub_location else None)
+        area_name = d.area.name if d.area else (d.sub_location.area.name if d.sub_location else "")
         result.append({
             "id": d.id,
             "group_id": d.group_id,
+            "area_id": aid,
+            "area": area_name,
             "sub_location_id": d.sub_location_id,
-            "area_id": d.sub_location.area_id if d.sub_location else None,
-            "area": d.sub_location.area.name if d.sub_location else "",
             "sub_location": d.sub_location.name if d.sub_location else "",
             "status": d.status,
             "power_rating": d.power_rating,
@@ -152,6 +155,7 @@ def list_group_devices(group_id: int, db: Session = Depends(get_db)):
 def create_group_device(data: DeviceCreate, db: Session = Depends(get_db)):
     d = GroupDevice(
         group_id=data.group_id,
+        area_id=data.area_id,
         sub_location_id=data.sub_location_id,
         status=data.status,
         power_rating=data.power_rating,
@@ -168,6 +172,7 @@ def update_group_device(device_id: int, data: DeviceCreate, db: Session = Depend
     d = db.query(GroupDevice).get(device_id)
     if not d:
         raise HTTPException(404)
+    d.area_id = data.area_id
     d.sub_location_id = data.sub_location_id
     d.status = data.status
     d.power_rating = data.power_rating
