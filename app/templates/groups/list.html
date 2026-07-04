@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+{% block title %}其余设备{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto" x-data="groupManager()">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">其余设备</h1>
+    <div class="flex items-center gap-2">
+      <button @click="showGroupForm(null)" class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        添加分组
+      </button>
+    </div>
+  </div>
+
+  <div class="flex flex-col lg:flex-row gap-6">
+    <!-- Left: group menu -->
+    <div class="lg:w-56 shrink-0">
+      <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <template x-for="g in groups" :key="g.id">
+          <button @click="selectGroup(g)" class="w-full text-left px-4 py-3 text-sm border-b hover:bg-gray-50 transition-colors flex items-center justify-between"
+                  :class="selectedGroup?.id === g.id ? 'bg-primary-50 text-primary-700 font-medium border-l-2 border-l-primary-600' : 'text-gray-700'">
+            <span x-text="g.name"></span>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-gray-400" x-text="g.device_count"></span>
+              <button @click.stop="showGroupForm(g)" class="text-xs text-primary-500 hover:text-primary-700">编</button>
+              <button @click.stop="deleteGroup(g)" class="text-xs text-red-500 hover:text-red-700">×</button>
+            </div>
+          </button>
+        </template>
+        <div x-show="groups.length === 0" class="px-4 py-8 text-center text-sm text-gray-400">暂无分组，点击右上角添加</div>
+      </div>
+    </div>
+
+    <!-- Right: device table -->
+    <div class="flex-1 min-w-0">
+      <template x-if="!selectedGroup">
+        <div class="bg-white rounded-xl shadow-sm border p-16 text-center text-gray-400">请从左侧选择一个分组</div>
+      </template>
+
+      <template x-if="selectedGroup">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-gray-800">
+              <span x-text="selectedGroup.name"></span>
+              <span class="text-sm font-normal text-gray-400 ml-2" x-text="'共 ' + devices.length + ' 台'"></span>
+            </h2>
+            <div class="flex items-center gap-2">
+              <button @click="showFieldForm(null)" class="text-sm text-primary-600 hover:text-primary-700">管理字段</button>
+              <button @click="showDeviceForm(null)" class="inline-flex items-center gap-1 px-3 py-1.5 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                添加
+              </button>
+            </div>
+          </div>
+
+          <!-- Desktop table -->
+          <div class="bg-white rounded-xl shadow-sm border overflow-hidden hidden md:block">
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-gray-50 border-b">
+                  <tr>
+                    <template x-for="f in selectedGroup.fields" :key="f.id">
+                      <th class="text-left px-4 py-3 text-xs font-medium text-gray-500" x-text="f.name"></th>
+                    </template>
+                    <th class="text-left px-4 py-3 text-xs font-medium text-gray-500">大区域</th>
+                    <th class="text-left px-4 py-3 text-xs font-medium text-gray-500">小区域</th>
+                    <th class="text-left px-4 py-3 text-xs font-medium text-gray-500">状态</th>
+                    <th class="text-right px-4 py-3 text-xs font-medium text-gray-500">操作</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y">
+                  <template x-for="d in devices" :key="d.id">
+                    <tr class="hover:bg-gray-50">
+                      <template x-for="f in selectedGroup.fields" :key="f.id">
+                        <td class="px-4 py-3 text-sm text-gray-600" x-text="d.field_values[f.name] || '-'"></td>
+                      </template>
+                      <td class="px-4 py-3 text-sm text-gray-600" x-text="d.area || '-'"></td>
+                      <td class="px-4 py-3 text-sm text-gray-600" x-text="d.sub_location || '-'"></td>
+                      <td class="px-4 py-3">
+                        <span x-show="d.status == '正常'" class="inline-flex px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">正常</span>
+                        <span x-show="d.status == '故障'" class="inline-flex px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">故障</span>
+                        <span x-show="d.status == '报废'" class="inline-flex px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">报废</span>
+                      </td>
+                      <td class="px-4 py-3 text-right">
+                        <button @click="showDeviceForm(d)" class="text-sm text-primary-600 hover:text-primary-700 mr-3">编辑</button>
+                        <button @click="deleteDevice(d)" class="text-sm text-red-600 hover:text-red-700">删除</button>
+                      </td>
+                    </tr>
+                  </template>
+                  <tr x-show="devices.length === 0">
+                    <td :colspan="selectedGroup.fields.length + 4" class="px-4 py-12 text-center text-gray-400">暂无设备</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Mobile cards -->
+          <div class="md:hidden space-y-3">
+            <template x-for="d in devices" :key="d.id">
+              <div class="bg-white rounded-xl shadow-sm border p-4">
+                <div class="flex items-start justify-between mb-2">
+                  <span class="font-medium" x-text="d.field_values[selectedGroup.fields[0]?.name] || d.name"></span>
+                  <span x-show="d.status == '正常'" class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">正常</span>
+                  <span x-show="d.status == '故障'" class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">故障</span>
+                  <span x-show="d.status == '报废'" class="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">报废</span>
+                </div>
+                <div class="text-sm text-gray-500 space-y-1">
+                  <template x-for="f in selectedGroup.fields" :key="f.id">
+                    <div x-show="d.field_values[f.name]"><span x-text="f.name + ': '" class="text-gray-400"></span><span x-text="d.field_values[f.name]"></span></div>
+                  </template>
+                  <div x-show="d.area">位置: <span x-text="d.area + ' → ' + d.sub_location"></span></div>
+                </div>
+                <div class="flex gap-3 mt-3 pt-3 border-t text-sm">
+                  <button @click="showDeviceForm(d)" class="text-primary-600">编辑</button>
+                  <button @click="deleteDevice(d)" class="text-red-600">删除</button>
+                </div>
+              </div>
+            </template>
+            <div x-show="devices.length === 0" class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">暂无设备</div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Group form modal -->
+  <div x-show="showGroupModal" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50" @click.self="showGroupModal = false">
+    <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
+      <h3 class="font-semibold text-lg mb-4" x-text="editingGroup ? '编辑分组' : '添加分组'"></h3>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">名称 <span class="text-red-500">*</span></label>
+          <input type="text" x-model="groupForm.name" class="w-full px-3 py-2 border rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">描述</label>
+          <textarea x-model="groupForm.description" rows="2" class="w-full px-3 py-2 border rounded-lg text-sm"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button @click="showGroupModal = false" class="px-4 py-2 border rounded-lg text-sm">取消</button>
+        <button @click="saveGroup()" class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Field management modal -->
+  <div x-show="showFieldModal" class="fixed inset-0 bg-black/30 flex items-start justify-center z-50 pt-10 overflow-y-auto" @click.self="showFieldModal = false">
+    <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg mx-4">
+      <h3 class="font-semibold text-lg mb-4">
+        管理字段 — <span x-text="selectedGroup?.name" class="text-primary-600"></span>
+        <button @click="addField()" class="ml-3 px-3 py-1 bg-primary-600 text-white text-xs rounded-lg hover:bg-primary-700">+ 添加字段</button>
+      </h3>
+      <div class="space-y-3 max-h-96 overflow-y-auto">
+        <template x-for="(f, idx) in fieldEditList" :key="idx">
+          <div class="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
+            <div class="flex-1 grid grid-cols-3 gap-2 text-sm">
+              <input type="text" x-model="f.field_name" placeholder="字段名" class="px-2 py-1 border rounded text-xs">
+              <select x-model="f.field_type" class="px-2 py-1 border rounded text-xs">
+                <option value="text">文本</option>
+                <option value="number">数字</option>
+              </select>
+              <div class="flex items-center gap-2">
+                <input type="text" x-model="f.unit" placeholder="单位" class="w-full px-2 py-1 border rounded text-xs">
+                <label class="flex items-center gap-1 text-xs whitespace-nowrap">
+                  <input type="checkbox" x-model="f.required" :value="1">
+                  必填
+                </label>
+                <button @click="removeField(idx)" class="text-red-400 hover:text-red-600">&times;</button>
+              </div>
+            </div>
+          </div>
+        </template>
+        <div x-show="fieldEditList.length === 0" class="text-center text-sm text-gray-400 py-4">暂无字段，点击上方按钮添加</div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button @click="showFieldModal = false" class="px-4 py-2 border rounded-lg text-sm">取消</button>
+        <button @click="saveFields()" class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm">保存字段</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Device form modal -->
+  <div x-show="showDeviceModal" class="fixed inset-0 bg-black/30 flex items-start justify-center z-50 pt-10 overflow-y-auto" @click.self="showDeviceModal = false">
+    <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-2xl mx-4">
+      <h3 class="font-semibold text-lg mb-4" x-text="editingDevice ? '编辑设备' : '添加设备'"></h3>
+      <div class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <template x-for="f in selectedGroup.fields" :key="f.id">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                <span x-text="f.name"></span>
+                <span x-show="f.unit" class="text-gray-400" x-text="`(${f.unit})`"></span>
+                <span x-show="f.required" class="text-red-500">*</span>
+              </label>
+              <template x-if="f.type == 'number'">
+                <input type="number" step="0.01" x-model="deviceForm.field_values[f.name]" class="w-full px-3 py-2 border rounded-lg text-sm">
+              </template>
+              <template x-if="f.type != 'number'">
+                <input type="text" x-model="deviceForm.field_values[f.name]" class="w-full px-3 py-2 border rounded-lg text-sm">
+              </template>
+            </div>
+          </template>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">大区域</label>
+            <select x-model="deviceForm.area_id" @change="onAreaChange" class="w-full px-3 py-2 border rounded-lg text-sm">
+              <option value="">选择大区域</option>
+              {% for a in areas %}
+              <option value="{{ a.id }}">{{ a.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">小区域</label>
+            <select x-model="deviceForm.sub_location_id" class="w-full px-3 py-2 border rounded-lg text-sm">
+              <option value="">选择小区域</option>
+              <template x-for="sl in subLocations" :key="sl.id">
+                <option :value="sl.id" x-text="sl.name"></option>
+              </template>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">状态</label>
+            <select x-model="deviceForm.status" class="w-full px-3 py-2 border rounded-lg text-sm">
+              <option value="正常">正常</option>
+              <option value="故障">故障</option>
+              <option value="报废">报废</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">额定功率 (W)</label>
+            <input type="number" step="0.01" x-model="deviceForm.power_rating" class="w-full px-3 py-2 border rounded-lg text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
+          <textarea x-model="deviceForm.notes" rows="2" class="w-full px-3 py-2 border rounded-lg text-sm"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button @click="showDeviceModal = false" class="px-4 py-2 border rounded-lg text-sm">取消</button>
+        <button @click="saveDevice()" class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function groupManager() {
+  return {
+    groups: [],
+    selectedGroup: null,
+    devices: [],
+    subLocations: [],
+
+    showGroupModal: false,
+    editingGroup: null,
+    groupForm: { name: '', description: '' },
+
+    showFieldModal: false,
+    fieldEditList: [],
+
+    showDeviceModal: false,
+    editingDevice: null,
+    deviceForm: { area_id: '', sub_location_id: '', status: '正常', power_rating: '', notes: '', field_values: {} },
+
+    async init() {
+      await this.loadGroups();
+    },
+
+    async loadGroups() {
+      const r = await fetch('/api/groups/');
+      this.groups = await r.json();
+    },
+
+    async selectGroup(g) {
+      this.selectedGroup = g;
+      const r = await fetch(`/api/groups/${g.id}/devices`);
+      this.devices = await r.json();
+    },
+
+    // --- Group CRUD ---
+    showGroupForm(g) {
+      this.editingGroup = g;
+      this.groupForm = g ? { name: g.name, description: g.description } : { name: '', description: '' };
+      this.showGroupModal = true;
+    },
+
+    async saveGroup() {
+      const isEdit = this.editingGroup !== null;
+      const url = isEdit ? `/api/groups/${this.editingGroup.id}` : '/api/groups/';
+      const method = isEdit ? 'PUT' : 'POST';
+      await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(this.groupForm) });
+      this.showGroupModal = false;
+      await this.loadGroups();
+    },
+
+    async deleteGroup(g) {
+      if (!confirm(`确定删除分组「${g.name}」吗？其下所有设备也会删除。`)) return;
+      await fetch(`/api/groups/${g.id}`, { method: 'DELETE' });
+      if (this.selectedGroup?.id === g.id) { this.selectedGroup = null; this.devices = []; }
+      await this.loadGroups();
+    },
+
+    // --- Field management ---
+    showFieldForm() {
+      this.fieldEditList = (this.selectedGroup.fields || []).map(f => ({
+        id: f.id,
+        field_name: f.name,
+        field_type: f.type,
+        unit: f.unit || '',
+        required: f.required || 0,
+      }));
+      this.showFieldModal = true;
+    },
+
+    addField() {
+      this.fieldEditList.push({ id: null, field_name: '', field_type: 'text', unit: '', required: 0 });
+    },
+
+    removeField(idx) {
+      this.fieldEditList.splice(idx, 1);
+    },
+
+    async saveFields() {
+      // delete all existing fields and recreate
+      const groupId = this.selectedGroup.id;
+      // delete existing
+      for (const f of this.selectedGroup.fields || []) {
+        await fetch(`/api/groups/fields/${f.id}`, { method: 'DELETE' });
+      }
+      // create new
+      for (let i = 0; i < this.fieldEditList.length; i++) {
+        const f = this.fieldEditList[i];
+        if (!f.field_name) continue;
+        await fetch('/api/groups/fields', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            group_id: groupId,
+            field_name: f.field_name,
+            field_type: f.field_type,
+            unit: f.unit,
+            required: f.required ? 1 : 0,
+            sort_order: i,
+          }),
+        });
+      }
+      this.showFieldModal = false;
+      // reload group to get updated fields
+      await this.loadGroups();
+      const updated = this.groups.find(g => g.id === groupId);
+      if (updated) this.selectedGroup = updated;
+      await this.selectGroup(this.selectedGroup);
+    },
+
+    // --- Area ---
+    onAreaChange() {
+      this.deviceForm.sub_location_id = '';
+      if (!this.deviceForm.area_id) { this.subLocations = []; return; }
+      fetch('/api/devices/locations').then(r => r.json()).then(areas => {
+        const a = areas.find(x => x.id == this.deviceForm.area_id);
+        this.subLocations = a ? (a.sub_locations || []) : [];
+      });
+    },
+
+    // --- Device CRUD ---
+    showDeviceForm(d) {
+      this.editingDevice = d;
+      if (d) {
+        const fv = d.field_values || {};
+        this.deviceForm = {
+          area_id: d.sub_location_id ? '' : '',
+          sub_location_id: d.sub_location_id || '',
+          status: d.status,
+          power_rating: d.power_rating || '',
+          notes: d.notes || '',
+          field_values: {...fv},
+        };
+        // load area
+        if (d.sub_location_id) {
+          fetch(`/api/devices/sub-locations/${d.sub_location_id}`).then(r => r.json()).then(sl => {
+            this.deviceForm.area_id = sl.area_id;
+            this.onAreaChange();
+          });
+        } else {
+          this.subLocations = [];
+        }
+      } else {
+        this.deviceForm = { area_id: '', sub_location_id: '', status: '正常', power_rating: '', notes: '', field_values: {} };
+        this.subLocations = [];
+        // init field values as empty
+        for (const f of this.selectedGroup.fields) {
+          this.deviceForm.field_values[f.name] = '';
+        }
+      }
+      this.showDeviceModal = true;
+    },
+
+    async saveDevice() {
+      const group = this.selectedGroup;
+      // check required
+      for (const f of group.fields) {
+        if (f.required && !this.deviceForm.field_values[f.name]) {
+          alert(`请填写「${f.name}」`);
+          return;
+        }
+      }
+      const payload = {
+        group_id: group.id,
+        sub_location_id: this.deviceForm.sub_location_id ? parseInt(this.deviceForm.sub_location_id) : null,
+        status: this.deviceForm.status,
+        power_rating: parseFloat(this.deviceForm.power_rating) || 0,
+        notes: this.deviceForm.notes,
+        field_values: this.deviceForm.field_values,
+      };
+
+      const url = this.editingDevice ? `/api/groups/devices/${this.editingDevice.id}` : '/api/groups/devices';
+      const method = this.editingDevice ? 'PUT' : 'POST';
+
+      const r = await fetch(url, { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+      const data = await r.json();
+      if (data.ok) {
+        this.showDeviceModal = false;
+        await this.selectGroup(group);
+      }
+    },
+
+    deleteDevice(d) {
+      if (!confirm('确定删除此设备吗？')) return;
+      fetch(`/api/groups/devices/${d.id}`, { method: 'DELETE' })
+        .then(r => r.json()).then(() => this.selectGroup(this.selectedGroup));
+    },
+  }
+}
+</script>
+{% endblock %}

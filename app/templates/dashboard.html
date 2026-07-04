@@ -10,7 +10,6 @@
     <div class="bg-white rounded-xl shadow-sm border p-5">
       <div class="text-sm text-gray-500 mb-1">设备总数</div>
       <div class="text-3xl font-bold text-gray-800">{{ total }}</div>
-      <div class="text-xs text-gray-400 mt-1">其他设备（不含多联机）</div>
     </div>
     <div class="bg-white rounded-xl shadow-sm border p-5">
       <div class="text-sm text-gray-500 mb-1">正常</div>
@@ -64,28 +63,13 @@
     </div>
   </div>
 
-  <!-- 多联机统计 + 能耗概览 -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- 能耗概览 -->
+  <div class="grid grid-cols-1 lg:grid-cols-1 gap-6">
     <div class="bg-white rounded-xl shadow-sm border p-5">
       <div class="flex items-center justify-between mb-2">
-        <h2 class="font-semibold text-gray-700">多联机设备</h2>
-        <a href="/energy/multi" class="text-xs text-primary-600 hover:text-primary-700">管理 →</a>
+        <h2 class="font-semibold text-gray-700">总能耗</h2>
       </div>
-      <div class="text-2xl font-bold text-orange-600">{{ multi_count }} <span class="text-sm font-normal text-gray-400">台</span></div>
-    </div>
-    <div class="bg-white rounded-xl shadow-sm border p-5">
-      <div class="flex items-center justify-between mb-2">
-        <h2 class="font-semibold text-gray-700">设备能耗</h2>
-        <span class="text-xs text-gray-400">压缩机/水泵/风机等</span>
-      </div>
-      <div class="text-2xl font-bold text-primary-600">{{ other_energy }} <span class="text-sm font-normal text-gray-400">kWh</span></div>
-    </div>
-    <div class="bg-white rounded-xl shadow-sm border p-5">
-      <div class="flex items-center justify-between mb-2">
-        <h2 class="font-semibold text-gray-700">多联机能耗</h2>
-        <span class="text-xs text-gray-400">独立统计</span>
-      </div>
-      <div class="text-2xl font-bold text-orange-600">{{ multi_energy }} <span class="text-sm font-normal text-gray-400">kWh</span></div>
+      <div class="text-2xl font-bold text-primary-600">{{ total_energy }} <span class="text-sm font-normal text-gray-400">kWh</span></div>
     </div>
   </div>
 </div>

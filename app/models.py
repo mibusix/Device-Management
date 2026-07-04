@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, Integer, String, Float, ForeignKey, Text, Enum, DateTime, Date
+    Column, Integer, String, Float, ForeignKey, Text, Enum, DateTime, Date, JSON
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -128,3 +128,46 @@ class MultiSplitEnergy(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     device = relationship("Device")
+
+
+class DeviceGroup(Base):
+    __tablename__ = "device_groups"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, unique=True)
+    description = Column(Text, default="")
+    sort_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.now)
+
+    fields = relationship("GroupField", back_populates="group",
+                          cascade="all, delete-orphan",
+                          order_by="GroupField.sort_order")
+    devices = relationship("GroupDevice", back_populates="group",
+                           cascade="all, delete-orphan")
+
+
+class GroupField(Base):
+    __tablename__ = "group_fields"
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("device_groups.id"), nullable=False)
+    field_name = Column(String(100), nullable=False)
+    field_type = Column(String(20), default="text")
+    unit = Column(String(50), default="")
+    required = Column(Integer, default=0)
+    sort_order = Column(Integer, default=0)
+
+    group = relationship("DeviceGroup", back_populates="fields")
+
+
+class GroupDevice(Base):
+    __tablename__ = "group_devices"
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("device_groups.id"), nullable=False)
+    sub_location_id = Column(Integer, ForeignKey("sub_locations.id"), nullable=True)
+    status = Column(String(20), default="正常")
+    power_rating = Column(Float, default=0)
+    notes = Column(Text, default="")
+    field_values = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=datetime.now)
+
+    group = relationship("DeviceGroup", back_populates="devices")
+    sub_location = relationship("SubLocation")
