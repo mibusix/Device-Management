@@ -97,6 +97,11 @@ def location_list(request: Request, db: Session = Depends(get_db)):
     })
 
 
+@router.get("/tools", response_class=HTMLResponse)
+def tools_page(request: Request):
+    return templates.TemplateResponse(request, "tools/index.html")
+
+
 @router.get("/groups", response_class=HTMLResponse)
 def groups_page(request: Request, db: Session = Depends(get_db)):
     areas = db.query(Area).all()

@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}小工具{% endblock %}
+{% block content %}
+<div x-data="toolApp()" class="max-w-4xl mx-auto space-y-6">
+  <h1 class="text-xl font-bold text-gray-800">小工具</h1>
+
+  <!-- Tab bar -->
+  <div class="flex gap-1 bg-gray-100 rounded-lg p-1">
+    <button @click="tab='energy'" :class="tab==='energy' ? 'bg-white shadow text-primary-600' : 'text-gray-500 hover:text-gray-700'" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors">能耗估算</button>
+    <button @click="tab='pressure'" :class="tab==='pressure' ? 'bg-white shadow text-primary-600' : 'text-gray-500 hover:text-gray-700'" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors">压力换算</button>
+    <button @click="tab='riv'" :class="tab==='riv' ? 'bg-white shadow text-primary-600' : 'text-gray-500 hover:text-gray-700'" class="flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors">电阻/电流/电压</button>
+  </div>
+
+  <!-- === 能耗估算 === -->
+  <div x-show="tab==='energy'" x-cloak class="bg-white rounded-xl shadow-sm border p-6 space-y-4">
+    <h2 class="text-lg font-semibold text-gray-700">能耗估算</h2>
+    <p class="text-xs text-gray-400">选择设备并输入开停机时间，估算消耗电量（不保存）</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1">选择设备</label>
+        <select x-model="energy.deviceId" @change="loadDevicePower" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="">-- 请选择 --</option>
+          <template x-for="d in deviceList" :key="d.id">
+            <option :value="d.id" x-text="d.name + ' (' + d.source + ')'" :data-power="d.power_rating"></option>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1">额定功率 (kW)</label>
+        <input type="number" step="0.01" x-model="energy.power" class="w-full border rounded-lg px-3 py-2 text-sm bg-gray-50">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1">开机时间</label>
+        <input type="datetime-local" x-model="energy.startTime" class="w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1">停机时间</label>
+        <input type="datetime-local" x-model="energy.stopTime" class="w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+    </div>
+    <div class="flex gap-4 items-center">
+      <button @click="calcEnergy" class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg text-sm font-medium">计算</button>
+      <div x-show="energy.result !== null" class="text-sm space-x-4">
+        <span>运行时间: <strong x-text="energy.runtimeHours + ' h'"></strong></span>
+        <span>估算能耗: <strong class="text-lg text-primary-600" x-text="energy.result + ' kWh'"></strong></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- === 压力换算 === -->
+  <div x-show="tab==='pressure'" x-cloak class="bg-white rounded-xl shadow-sm border p-6 space-y-4">
+    <h2 class="text-lg font-semibold text-gray-700">压力单位换算</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1">数值</label>
+        <input type="number" step="any" x-model="pressure.value" class="w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1">单位</label>
+        <select x-model="pressure.unit" class="w-full border rounded-lg px-3 py-2 text-sm">
+          <option value="MPa">MPa</option>
+          <option value="bar">bar</option>
+          <option value="psi">psi</option>
+          <option value="kPa">kPa</option>
+          <option value="kgfcm2">kgf/cm²</option>
+        </select>
+      </div>
+    </div>
+    <div class="border rounded-lg overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50">
+          <tr><th class="px-4 py-2 text-left text-gray-600 font-medium">单位</th><th class="px-4 py-2 text-left text-gray-600 font-medium">数值</th></tr>
+        </thead>
+        <tbody>
+          <tr class="border-t"><td class="px-4 py-2">MPa</td><td class="px-4 py-2 font-mono" x-text="pressure.converted.MPa"></td></tr>
+          <tr class="border-t"><td class="px-4 py-2">bar</td><td class="px-4 py-2 font-mono" x-text="pressure.converted.bar"></td></tr>
+          <tr class="border-t"><td class="px-4 py-2">psi</td><td class="px-4 py-2 font-mono" x-text="pressure.converted.psi"></td></tr>
+          <tr class="border-t"><td class="px-4 py-2">kPa</td><td class="px-4 py-2 font-mono" x-text="pressure.converted.kPa"></td></tr>
+          <tr class="border-t"><td class="px-4 py-2">kgf/cm²</td><td class="px-4 py-2 font-mono" x-text="pressure.converted.kgfcm2"></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- === 电阻/电流/电压 === -->
+  <div x-show="tab==='riv'" x-cloak class="bg-white rounded-xl shadow-sm border p-6 space-y-4">
+    <h2 class="text-lg font-semibold text-gray-700">电阻 / 电流 / 电压 计算</h2>
+    <p class="text-xs text-gray-400">输入任意两个参数，自动计算第三个（欧姆定律 V = I × R）</p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1">电压 V (伏特)</label>
+        <input type="number" step="any" x-model.number="riv.V" @input="riv._dirty='V'; calcRIV()" class="w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1">电流 I (安培)</label>
+        <input type="number" step="any" x-model.number="riv.I" @input="riv._dirty='I'; calcRIV()" class="w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-600 mb-1">电阻 R (欧姆)</label>
+        <input type="number" step="any" x-model.number="riv.R" @input="riv._dirty='R'; calcRIV()" class="w-full border rounded-lg px-3 py-2 text-sm">
+      </div>
+    </div>
+    <div x-show="riv.power !== null" class="bg-blue-50 rounded-lg px-4 py-3 text-sm text-blue-800">
+      功率 P = <strong x-text="riv.power"></strong> W（<span x-text="(riv.power/1000).toFixed(3)"></span> kW）
+    </div>
+  </div>
+</div>
+
+<script>
+function toolApp() {
+  return {
+    tab: 'energy',
+    deviceList: [],
+    // Energy
+    energy: { deviceId: '', power: 0, startTime: '', stopTime: '', runtimeHours: 0, result: null },
+    // Pressure
+    pressure: { value: 1, unit: 'MPa', converted: { MPa: 1, bar: 10, psi: 145.038, kPa: 1000, kgfcm2: 10.197 } },
+    // RIV
+    riv: { V: null, I: null, R: null, power: null, _last: null },
+
+    init() {
+      this.loadDevices();
+      this.$watch('pressure.value', () => this.convertPressure());
+      this.$watch('pressure.unit', () => this.convertPressure());
+    },
+
+    async loadDevices() {
+      try {
+        const [mainRes, groupsRes] = await Promise.all([
+          fetch('/api/devices/'),
+          fetch('/api/groups/')
+        ]);
+        const mainDevices = await mainRes.json();
+        const groups = await groupsRes.json();
+        const all = [];
+        for (const d of mainDevices) {
+          all.push({ id: 'm' + d.id, name: d.name, source: '系统', power_rating: d.power_rating || 0 });
+        }
+        for (const g of groups) {
+          const devRes = await fetch('/api/groups/' + g.id + '/devices');
+          const gDevices = await devRes.json();
+          for (const d of gDevices) {
+            all.push({ id: 'g' + d.id, name: d.name || (g.name + ' #' + d.id), source: g.name, power_rating: d.power_rating || 0 });
+          }
+        }
+        this.deviceList = all;
+      } catch (e) { console.error(e); }
+    },
+
+    loadDevicePower() {
+      const d = this.deviceList.find(x => x.id === this.energy.deviceId);
+      this.energy.power = d ? d.power_rating : 0;
+      this.energy.result = null;
+    },
+
+    calcEnergy() {
+      const { power, startTime, stopTime } = this.energy;
+      if (!power || !startTime || !stopTime) return;
+      const t1 = new Date(startTime), t2 = new Date(stopTime);
+      const hours = (t2 - t1) / 3600000;
+      if (hours <= 0) return;
+      this.energy.runtimeHours = hours.toFixed(2);
+      this.energy.result = (power * hours).toFixed(2);
+    },
+
+    convertPressure() {
+      const val = parseFloat(this.pressure.value) || 0;
+      const unit = this.pressure.unit;
+      // all to MPa first
+      const toMPa = { MPa: 1, bar: 0.1, psi: 0.00689476, kPa: 0.001, kgfcm2: 0.0980665 };
+      const fromMPa = { MPa: 1, bar: 10, psi: 145.038, kPa: 1000, kgfcm2: 10.197 };
+      const mpa = val * (toMPa[unit] || 1);
+      this.pressure.converted = {
+        MPa: (mpa * fromMPa.MPa).toFixed(6),
+        bar: (mpa * fromMPa.bar).toFixed(6),
+        psi: (mpa * fromMPa.psi).toFixed(6),
+        kPa: (mpa * fromMPa.kPa).toFixed(6),
+        kgfcm2: (mpa * fromMPa.kgfcm2).toFixed(6),
+      };
+    },
+
+    calcRIV() {
+      const V = parseFloat(this.riv.V);
+      const I = parseFloat(this.riv.I);
+      const R = parseFloat(this.riv.R);
+      const dirty = this.riv._dirty;
+      const has2 = [isNaN(V), isNaN(I), isNaN(R)].filter(Boolean).length <= 1;
+      if (!has2) return;
+      if (dirty === 'V' && !isNaN(I) && !isNaN(R) && R !== 0 && I !== 0) {
+        // V changed but I,R known: recalc V (should match), but leave as-is
+      } else if ((dirty === 'V' || dirty === null) && !isNaN(I) && !isNaN(R)) {
+        // I and R known -> V
+        this.riv.V = (I * R).toFixed(4);
+      } else if ((dirty === 'I' || dirty === null) && !isNaN(V) && !isNaN(R) && R !== 0) {
+        this.riv.I = (V / R).toFixed(4);
+      } else if ((dirty === 'R' || dirty === null) && !isNaN(V) && !isNaN(I) && I !== 0) {
+        this.riv.R = (V / I).toFixed(4);
+      }
+      const v2 = parseFloat(this.riv.V), i2 = parseFloat(this.riv.I);
+      this.riv.power = (!isNaN(v2) && !isNaN(i2)) ? (v2 * i2).toFixed(2) : null;
+    }
+  }
+}
+</script>
+
+<style>
+[x-cloak] { display: none !important; }
+</style>
+{% endblock %}
