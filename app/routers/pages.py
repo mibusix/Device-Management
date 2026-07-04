@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -72,6 +72,8 @@ def device_add_form(request: Request, db: Session = Depends(get_db)):
 @router.get("/devices/{device_id}/edit", response_class=HTMLResponse)
 def device_edit_form(request: Request, device_id: int, db: Session = Depends(get_db)):
     device = db.query(Device).get(device_id)
+    if not device:
+        raise HTTPException(404, "设备不存在")
     types = db.query(DeviceType).all()
     areas = db.query(Area).all()
     return templates.TemplateResponse(request, "devices/form.html", {
@@ -84,6 +86,8 @@ def device_edit_form(request: Request, device_id: int, db: Session = Depends(get
 @router.get("/devices/{device_id}", response_class=HTMLResponse)
 def device_detail(request: Request, device_id: int, db: Session = Depends(get_db)):
     device = db.query(Device).get(device_id)
+    if not device:
+        raise HTTPException(404, "设备不存在")
     return templates.TemplateResponse(request, "devices/detail.html", {
         "device": device,
     })

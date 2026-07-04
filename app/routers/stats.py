@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.database import get_db
-from app.models import Device, GroupDevice, SubLocation, DeviceType
+from app.models import Device, GroupDevice, SubLocation, DeviceType, DeviceGroup
 
 router = APIRouter(prefix="/api/stats")
 
@@ -25,6 +25,12 @@ def get_all_devices(
             q = q.filter(GroupDevice.status == status)
         if area_id:
             q = q.join(GroupDevice.sub_location).filter(SubLocation.area_id == area_id)
+        if group_type and group_type.startswith("group_"):
+            try:
+                gid = int(group_type.split("_", 1)[1])
+                q = q.filter(GroupDevice.group_id == gid)
+            except (IndexError, ValueError):
+                pass
         if search:
             # search in field_values JSON (simple approach)
             all_g = q.order_by(GroupDevice.id.desc()).all()
@@ -54,12 +60,6 @@ def get_all_devices(
                     "status": g.status,
                 })
 
-        # filter by group_type
-        if group_type and group_type.startswith("group_"):
-            gid = int(group_type.split("_")[1])
-            all_devices = [d for d in all_devices if d["uid"].startswith("g") and
-                           db.query(GroupDevice).filter(GroupDevice.id == int(d["uid"][1:])).first().group_id == gid]
-
     # --- Main devices ---
     if not source or source == "main":
         q = db.query(Device)
@@ -70,8 +70,11 @@ def get_all_devices(
         if search:
             q = q.filter(Device.name.contains(search))
         if group_type and group_type.startswith("type_"):
-            tid = int(group_type.split("_")[1])
-            q = q.filter(Device.device_type_id == tid)
+            try:
+                tid = int(group_type.split("_", 1)[1])
+                q = q.filter(Device.device_type_id == tid)
+            except (IndexError, ValueError):
+                pass
 
         all_m = q.order_by(Device.id.desc()).limit(500).all()
         for d in all_m:

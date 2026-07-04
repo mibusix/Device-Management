@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
 from app.database import get_db
-from app.models import Device, DeviceFieldValue, DeviceStatus
+from app.models import Device, DeviceFieldValue, DeviceStatus, SubLocation
 
 router = APIRouter(prefix="/api/devices")
 

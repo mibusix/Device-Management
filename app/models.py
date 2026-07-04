@@ -26,7 +26,7 @@ class SubLocation(Base):
     __tablename__ = "sub_locations"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    area_id = Column(Integer, ForeignKey("areas.id"), nullable=False)
+    area_id = Column(Integer, ForeignKey("areas.id"), nullable=False, index=True)
     description = Column(Text, default="")
 
     area = relationship("Area", back_populates="sub_locations")
@@ -73,10 +73,10 @@ class Device(Base):
     __tablename__ = "devices"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(200), nullable=False)
-    device_type_id = Column(Integer, ForeignKey("device_types.id"), nullable=False)
+    device_type_id = Column(Integer, ForeignKey("device_types.id"), nullable=False, index=True)
     sub_type_id = Column(Integer, ForeignKey("device_type_sub_types.id"), nullable=True)
-    sub_location_id = Column(Integer, ForeignKey("sub_locations.id"), nullable=False)
-    status = Column(String(20), default=DeviceStatus.NORMAL.value)
+    sub_location_id = Column(Integer, ForeignKey("sub_locations.id"), nullable=False, index=True)
+    status = Column(String(20), default=DeviceStatus.NORMAL.value, index=True)
     power_rating = Column(Float, default=0)
 
     notes = Column(Text, default="")
@@ -161,9 +161,9 @@ class GroupField(Base):
 class GroupDevice(Base):
     __tablename__ = "group_devices"
     id = Column(Integer, primary_key=True, index=True)
-    group_id = Column(Integer, ForeignKey("device_groups.id"), nullable=False)
-    area_id = Column(Integer, ForeignKey("areas.id"), nullable=True)
-    sub_location_id = Column(Integer, ForeignKey("sub_locations.id"), nullable=True)
+    group_id = Column(Integer, ForeignKey("device_groups.id"), nullable=False, index=True)
+    area_id = Column(Integer, ForeignKey("areas.id"), nullable=True, index=True)
+    sub_location_id = Column(Integer, ForeignKey("sub_locations.id"), nullable=True, index=True)
     status = Column(String(20), default="正常")
     power_rating = Column(Float, default=0)
     notes = Column(Text, default="")

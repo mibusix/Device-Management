@@ -1,9 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from app.config import DATABASE_URL
+from app.config import DATABASE_URL, BASE_DIR
 import os
 
-os.makedirs("data", exist_ok=True)
+os.makedirs(os.path.join(BASE_DIR, "data"), exist_ok=True)
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
