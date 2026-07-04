@@ -137,6 +137,7 @@ def list_group_devices(group_id: int, db: Session = Depends(get_db)):
             "id": d.id,
             "group_id": d.group_id,
             "sub_location_id": d.sub_location_id,
+            "area_id": d.sub_location.area_id if d.sub_location else None,
             "area": d.sub_location.area.name if d.sub_location else "",
             "sub_location": d.sub_location.name if d.sub_location else "",
             "status": d.status,

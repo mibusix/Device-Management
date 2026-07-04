@@ -374,19 +374,15 @@ function groupManager() {
       if (d) {
         const fv = d.field_values || {};
         this.deviceForm = {
-          area_id: d.sub_location_id ? '' : '',
+          area_id: d.area_id || '',
           sub_location_id: d.sub_location_id || '',
           status: d.status,
           power_rating: d.power_rating || '',
           notes: d.notes || '',
           field_values: {...fv},
         };
-        // load area
-        if (d.sub_location_id) {
-          fetch(`/api/devices/sub-locations/${d.sub_location_id}`).then(r => r.json()).then(sl => {
-            this.deviceForm.area_id = sl.area_id;
-            this.onAreaChange();
-          });
+        if (this.deviceForm.area_id) {
+          this.onAreaChange();
         } else {
           this.subLocations = [];
         }
