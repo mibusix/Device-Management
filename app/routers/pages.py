@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.database import get_db
 from app.models import (
-    Device, DeviceType, Area, SubLocation,
-    EnergyRecord, DeviceStatus
+    Device, DeviceType, Area, SubLocation, DeviceStatus,
+    GroupDevice, DeviceGroup
 )
 
 router = APIRouter()
@@ -37,16 +37,16 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         cnt = db.query(Device).filter(Device.sub_location_id.in_(ids)).count() if ids else 0
         area_data.append({"name": a.name, "count": cnt, "area_id": a.id})
 
-    total_energy = db.query(func.sum(EnergyRecord.energy_kwh)).scalar() or 0
+    group_count = db.query(GroupDevice).count()
 
     return templates.TemplateResponse(request, "dashboard.html", {
-        "total": devices,
+        "total": devices + group_count,
         "normal": normal,
         "fault": fault,
         "scrapped": scrapped,
         "type_stats": type_stats,
         "area_data": area_data,
-        "total_energy": round(total_energy, 2),
+        "group_count": group_count,
     })
 
 
@@ -97,22 +97,6 @@ def location_list(request: Request, db: Session = Depends(get_db)):
     })
 
 
-@router.get("/energy", response_class=HTMLResponse)
-def energy_page(request: Request, db: Session = Depends(get_db)):
-    types = db.query(DeviceType).all()
-    records = (
-        db.query(EnergyRecord)
-        .order_by(EnergyRecord.created_at.desc())
-        .limit(100)
-        .all()
-    )
-    return templates.TemplateResponse(request, "energy/list.html", {
-        "types": types,
-        "records": records,
-        "multi": False,
-    })
-
-
 @router.get("/groups", response_class=HTMLResponse)
 def groups_page(request: Request, db: Session = Depends(get_db)):
     areas = db.query(Area).all()
@@ -121,6 +105,4 @@ def groups_page(request: Request, db: Session = Depends(get_db)):
     })
 
 
-@router.get("/types", response_class=HTMLResponse)
-def types_page(request: Request):
-    return templates.TemplateResponse(request, "types/list.html")
+

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from app.database import init_db
-from app.routers import pages, devices, locations, types_api, energy, groups, stats
+from app.routers import pages, devices, locations, groups, stats
 import os
 
 init_db()
@@ -13,7 +13,5 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static") if os.p
 app.include_router(pages.router)
 app.include_router(devices.router)
 app.include_router(locations.router)
-app.include_router(types_api.router)
-app.include_router(energy.router)
 app.include_router(groups.router)
 app.include_router(stats.router)
