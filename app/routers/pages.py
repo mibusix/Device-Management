@@ -51,37 +51,10 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/devices", response_class=HTMLResponse)
-def device_list(
-    request: Request,
-    type_id: int = None,
-    status: str = None,
-    area_id: int = None,
-    search: str = "",
-    db: Session = Depends(get_db),
-):
-    q = db.query(Device)
-    if type_id:
-        q = q.filter(Device.device_type_id == type_id)
-    if status:
-        q = q.filter(Device.status == status)
-    if area_id:
-        sub_ids = [sl.id for sl in db.query(SubLocation).filter(SubLocation.area_id == area_id).all()]
-        q = q.filter(Device.sub_location_id.in_(sub_ids)) if sub_ids else q
-    if search:
-        q = q.filter(Device.name.contains(search))
-
-    devices = q.order_by(Device.id.desc()).all()
-    all_types = db.query(DeviceType).all()
-    all_areas = db.query(Area).all()
-
-    return templates.TemplateResponse(request, "devices/list.html", {
-        "devices": devices,
-        "types": all_types,
-        "areas": all_areas,
-        "filter_type": type_id,
-        "filter_status": status,
-        "filter_area": area_id,
-        "search": search,
+def device_stats(request: Request, db: Session = Depends(get_db)):
+    areas = db.query(Area).all()
+    return templates.TemplateResponse(request, "devices/stats.html", {
+        "areas": areas,
     })
 
 
