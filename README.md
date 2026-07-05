@@ -15,14 +15,40 @@
 - Python 3 / FastAPI / SQLAlchemy / SQLite
 - Jinja2 / Tailwind CSS (CDN) / Alpine.js
 
-## 快速开始
+## 安装
+
+默认账户 `admin` / `admin123`，**启动前必须设置 `SECRET_KEY` 环境变量**。
+
+### 方式一：Docker 运行（推荐）
 
 ```bash
-pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8080
+docker run -d --name device-mgr \
+  -p 8080:8080 \
+  -e SECRET_KEY="$(openssl rand -hex 32)" \
+  -v "$(pwd)/data:/app/data" \
+  mibusix/device-management:latest
 ```
 
-浏览器打开 `http://localhost:8080`，默认账户 `admin` / `admin123`。
+浏览器打开 `http://localhost:8080`。
+
+### 方式二：Docker Compose
+
+```bash
+git clone https://github.com/mibusix/Device-Management.git
+cd Device-Management
+echo "SECRET_KEY=$(openssl rand -hex 32)" > .env
+docker compose up -d
+```
+
+### 方式三：直接安装
+
+```bash
+git clone https://github.com/mibusix/Device-Management.git
+cd Device-Management
+pip install -r requirements.txt
+export SECRET_KEY="$(openssl rand -hex 32)"
+uvicorn app.main:app --host 0.0.0.0 --port 8080
+```
 
 ## 项目结构
 
@@ -54,6 +80,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080
 │       └── logs/            # 操作日志
 ├── data/
 │   └── devices.db           # SQLite 数据库（自动创建）
+├── Dockerfile
+├── docker-compose.yml
 ├── requirements.txt
 └── README.md
 ```
@@ -86,120 +114,50 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080
 
 ---
 
-## 部署教程
-
-本节提供完整的部署指南，帮助您将设备管理系统部署到生产环境。
-
-### 环境要求
-
-- **Python**：3.8 或更高版本
-- **操作系统**：Linux、macOS 或 Windows
-- **依赖管理**：pip（Python 包管理器）
-- **网络**：能够访问互联网以下载依赖包
-
-### 安装步骤
-
-1. **克隆项目**
-   ```bash
-   git clone <项目仓库地址>
-   cd 设备管理
-   ```
-
-2. **创建虚拟环境（推荐）**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # Linux/macOS
-   # 或
-   venv\Scripts\activate  # Windows
-   ```
-
-3. **安装依赖**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-### 配置说明
-
-项目通过环境变量进行配置，无需修改代码。主要配置项包括数据库连接、安全密钥和访问认证。
-
-### 启动方式
-
-**开发环境启动：**
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
-```
-
-**生产环境启动：**
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 4
-```
-
-启动后，浏览器访问 `http://localhost:8080` 即可使用系统，默认管理员 `admin` / `admin123`。
-
-### 环境变量说明
+## 环境变量
 
 | 变量名 | 必填 | 默认值 | 说明 |
 |--------|------|--------|------|
-| `SECRET_KEY` | 是 | 无 | JWT 签名密钥，启动前必须设置。建议随机生成：`export SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"` |
-| `DATABASE_URL` | 否 | `sqlite:///data/devices.db` | 数据库连接字符串。默认使用 SQLite，可改为 PostgreSQL 等。 |
-| `HTTPS` | 否 | 空 | 设为 `1` 时 Cookie 启用 `secure` 标志，生产环境需开启。 |
+| `SECRET_KEY` | 是 | 无 | JWT 签名密钥，启动前必须设置 |
+| `DATABASE_URL` | 否 | `sqlite:///data/devices.db` | 数据库连接字符串 |
+| `HTTPS` | 否 | 空 | 设为 `1` 时 Cookie 启用 `secure` 标志 |
 
-**示例配置（.env 文件）：**
+**.env 示例：**
 ```env
 SECRET_KEY=your_random_secret_key_here
 DATABASE_URL=sqlite:///data/devices.db
 HTTPS=1
 ```
 
-### 验证部署
+## 验证部署
 
-1. **服务状态检查**
-   ```bash
-   curl http://localhost:8080
-   ```
-   返回 302 重定向（跳转到登录页）表示服务正常运行。
+```bash
+# 登录获取 token
+curl -c /tmp/cookies.txt -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}'
 
-2. **API 端点测试**
-   ```bash
-   # 测试统计 API（需先登录获取 cookie）
-   curl -c /tmp/cookies.txt -X POST http://localhost:8080/api/auth/login \
-     -H "Content-Type: application/json" \
-     -d '{"username":"admin","password":"admin123"}'
-   curl -b /tmp/cookies.txt http://localhost:8080/api/stats/devices
-   ```
+# 测试统计 API
+curl -b /tmp/cookies.txt http://localhost:8080/api/stats/devices
 
-3. **未登录保护测试**
-   ```bash
-   curl -i http://localhost:8080/api/devices/
-   # 返回 401 Unauthorized
-   ```
+# 未登录返回 401
+curl -i http://localhost:8080/api/devices/
+```
 
-### 常见问题
+## FAQ
 
-**Q1: 启动时报错 "Address already in use"**
-- 端口 8080 被占用，修改端口号：
-  ```bash
-  uvicorn app.main:app --host 0.0.0.0 --port 9000
-  ```
+**Q: 启动报错 "Address already in use"？**
+- 端口被占，换端口：`uvicorn app.main:app --port 9000`（直接安装）或修改 `-p` 参数（Docker）
 
-**Q2: 数据库文件在哪里？**
-- 默认数据库文件位于 `data/devices.db`，首次启动自动创建。
+**Q: 忘记管理员密码？**
+- 删除 `data/devices.db`，重启服务自动恢复 `admin` / `admin123`
 
-**Q3: 如何重置数据库？**
-- 删除 `data/devices.db` 文件，重启服务即可自动重建。
+**Q: 如何重置数据库？**
+- Docker：删除本地 `data/` 目录，重启容器
+- 直接安装：删除 `data/devices.db`，重启服务
 
-**Q4: 如何启用 HTTPS？**
-- 推荐使用 Nginx 或 Caddy 作为反向代理配置 HTTPS，而不是直接在应用中配置。
+**Q: 如何备份数据？**
+- SQLite 是单文件，直接备份 `data/devices.db` 即可
 
-**Q5: 如何修改默认端口？**
-- 启动时指定 `--port` 参数：
-  ```bash
-  uvicorn app.main:app --host 0.0.0.0 --port 9000
-  ```
-
-**Q6: 忘记管理员密码怎么办？**
-- 删除 `data/devices.db` 文件，重启服务即可重建数据库并恢复默认 `admin`/`admin123` 账户。
-- **注意：此操作会清除所有数据，仅适用于初始部署场景。**
-
-**Q7: 如何备份数据？**
-- 直接备份 `data/devices.db` 文件即可。SQLite 数据库是单文件，便于备份和迁移。
+**Q: 如何启用 HTTPS？**
+- 推荐使用 Nginx 或 Caddy 作为反向代理，设置 `HTTPS=1` 启用 secure cookie

@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.git/
+.github/
+data/
+*.db
+.env
+opencode.json
+*.md
+!README.md
+DOCKER_SETUP.md

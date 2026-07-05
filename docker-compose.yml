@@ -1,0 +1,11 @@
+services:
+  device-mgr:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - HTTPS=0
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
