@@ -1,6 +1,7 @@
 services:
   device-mgr:
-    build: .
+    image: mibusix/device-management:latest
+    container_name: device-mgr
     ports:
       - "8080:8080"
     environment:
