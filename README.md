@@ -33,15 +33,8 @@ docker run -d --name device-mgr \
 
 ### 方式二：Docker Compose（YAML 配置）
 
-```bash
-# 创建工作目录并进入
-mkdir device-mgr && cd device-mgr
-
-# 生成密钥写入 .env
-echo "SECRET_KEY=$(openssl rand -hex 32)" > .env
-
-# 创建 docker-compose.yml
-cat > docker-compose.yml << 'EOF'
+```yaml
+# docker-compose.yml
 services:
   device-mgr:
     image: mibusix/device-management:latest
@@ -54,20 +47,11 @@ services:
     volumes:
       - ./data:/app/data
     restart: unless-stopped
-EOF
-
-# 启动
-docker compose up -d
 ```
 
-浏览器打开 `http://localhost:8080`。
-
-常用命令：
 ```bash
-docker compose up -d      # 启动
-docker compose down        # 停止
-docker compose logs -f     # 看日志
-docker compose restart     # 重启
+echo "SECRET_KEY=$(openssl rand -hex 32)" > .env
+docker compose up -d
 ```
 
 ### 方式三：直接安装（开发用）
