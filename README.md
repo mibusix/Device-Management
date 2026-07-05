@@ -19,7 +19,7 @@
 
 默认账户 `admin` / `admin123`，**启动前必须设置 `SECRET_KEY` 环境变量**。
 
-### 方式一：Docker 运行（推荐）
+### 方式一：Docker 一条命令（推荐）
 
 ```bash
 docker run -d --name device-mgr \
@@ -31,16 +31,46 @@ docker run -d --name device-mgr \
 
 浏览器打开 `http://localhost:8080`。
 
-### 方式二：Docker Compose
+### 方式二：Docker Compose（YAML 配置）
 
 ```bash
-git clone https://github.com/mibusix/Device-Management.git
-cd Device-Management
+# 创建工作目录并进入
+mkdir device-mgr && cd device-mgr
+
+# 生成密钥写入 .env
 echo "SECRET_KEY=$(openssl rand -hex 32)" > .env
+
+# 创建 docker-compose.yml
+cat > docker-compose.yml << 'EOF'
+services:
+  device-mgr:
+    image: mibusix/device-management:latest
+    container_name: device-mgr
+    ports:
+      - "8080:8080"
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - HTTPS=0
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+EOF
+
+# 启动
 docker compose up -d
 ```
 
-### 方式三：直接安装
+浏览器打开 `http://localhost:8080`。
+
+常用命令：
+```bash
+docker compose up -d      # 启动
+docker compose down        # 停止
+docker compose logs -f     # 看日志
+docker compose restart     # 重启
+```
+
+### 方式三：直接安装（开发用）
 
 ```bash
 git clone https://github.com/mibusix/Device-Management.git
