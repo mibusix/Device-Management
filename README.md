@@ -9,6 +9,8 @@
 - **设备管理** — 按分组（多联机/控制保护器/压缩机/水泵）管理设备，每组独立字段模板
 - **位置管理** — 大区域 → 小区域层级结构
 - **小工具** — 能耗估算（选设备+开停机时间）、压力单位换算、欧姆定律计算
+- **用户管理** — 三级角色（管理员/普通用户/访客），权限控制
+- **操作日志** — 所有增删改操作可追溯
 
 ## 技术栈
 
@@ -167,7 +169,10 @@ curl -i http://localhost:8080/api/devices/
 ## FAQ
 
 **Q: 启动报错 "Address already in use"？**
-- 端口被占，换端口：`uvicorn app.main:app --port 9000`（直接安装）或修改 `-p` 参数（Docker）
+- 端口被占，换端口：
+  - Docker：改 `-p` 左边端口号，如 `-p 9000:8080`
+  - Docker Compose：改 `docker-compose.yml` 中 `ports` 的宿主机端口
+  - 直接安装：`uvicorn app.main:app --port 9000`
 
 **Q: 忘记管理员密码？**
 - 删除 `data/devices.db`，重启服务自动恢复 `admin` / `admin123`
