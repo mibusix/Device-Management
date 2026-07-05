@@ -3,46 +3,46 @@
 
 {% block content %}
 <div class="max-w-7xl mx-auto" x-data="statsManager()">
-  <h1 class="text-2xl font-bold text-gray-800 mb-6">设备统计</h1>
+  <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">设备统计</h1>
 
   <!-- Stats cards -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white rounded-xl shadow-sm border p-5">
-      <div class="text-sm text-gray-500 mb-1">设备总数</div>
-      <div class="text-3xl font-bold text-gray-800" x-text="total"></div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-5">
+      <div class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">设备总数</div>
+      <div class="text-3xl font-bold text-gray-800 dark:text-gray-100" x-text="total"></div>
     </div>
-    <div class="bg-white rounded-xl shadow-sm border p-5">
-      <div class="text-sm text-gray-500 mb-1">正常</div>
-      <div class="text-3xl font-bold text-green-600" x-text="normal"></div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-5">
+      <div class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">正常</div>
+      <div class="text-3xl font-bold text-green-600 dark:text-green-400" x-text="normal"></div>
     </div>
-    <div class="bg-white rounded-xl shadow-sm border p-5">
-      <div class="text-sm text-gray-500 mb-1">故障</div>
-      <div class="text-3xl font-bold text-red-600" x-text="fault"></div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-5">
+      <div class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">故障</div>
+      <div class="text-3xl font-bold text-red-600 dark:text-red-400" x-text="fault"></div>
     </div>
-    <div class="bg-white rounded-xl shadow-sm border p-5">
-      <div class="text-sm text-gray-500 mb-1">报废</div>
-      <div class="text-3xl font-bold text-gray-400" x-text="scrapped"></div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-5">
+      <div class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">报废</div>
+      <div class="text-3xl font-bold text-gray-400 dark:text-gray-500" x-text="scrapped"></div>
     </div>
   </div>
 
   <!-- Filters -->
-  <div class="bg-white rounded-xl shadow-sm border p-4 mb-6">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-4 mb-6">
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
       <div>
-        <label class="block text-xs text-gray-500 mb-1">搜索</label>
-        <input type="text" x-model="filter.search" @input.debounce="loadData" placeholder="名称/编号/型号" class="w-full px-3 py-2 border rounded-lg text-sm">
+        <label class="block text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">搜索</label>
+        <input type="text" x-model="filter.search" @input.debounce="loadData" placeholder="名称/编号/型号" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
       </div>
       <div>
-        <label class="block text-xs text-gray-500 mb-1">来源</label>
-        <select x-model="filter.source" @change="loadData" class="w-full px-3 py-2 border rounded-lg text-sm">
+        <label class="block text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">来源</label>
+        <select x-model="filter.source" @change="loadData" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
           <option value="">全部</option>
           <option value="group">分组设备</option>
           <option value="main">系统设备</option>
         </select>
       </div>
       <div>
-        <label class="block text-xs text-gray-500 mb-1">分组/类型</label>
-        <select x-model="filter.group_type" @change="loadData" class="w-full px-3 py-2 border rounded-lg text-sm">
+        <label class="block text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">分组/类型</label>
+        <select x-model="filter.group_type" @change="loadData" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
           <option value="">全部</option>
           <optgroup label="分组设备">
             <template x-for="g in groups" :key="'g'+g.id">
@@ -57,8 +57,8 @@
         </select>
       </div>
       <div>
-        <label class="block text-xs text-gray-500 mb-1">状态</label>
-        <select x-model="filter.status" @change="loadData" class="w-full px-3 py-2 border rounded-lg text-sm">
+        <label class="block text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">状态</label>
+        <select x-model="filter.status" @change="loadData" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
           <option value="">全部</option>
           <option value="正常">正常</option>
           <option value="故障">故障</option>
@@ -66,8 +66,8 @@
         </select>
       </div>
       <div>
-        <label class="block text-xs text-gray-500 mb-1">大区域</label>
-        <select x-model="filter.area_id" @change="loadData" class="w-full px-3 py-2 border rounded-lg text-sm">
+        <label class="block text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">大区域</label>
+        <select x-model="filter.area_id" @change="loadData" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
           <option value="">全部</option>
           {% for a in areas %}
           <option value="{{ a.id }}">{{ a.name }}</option>
@@ -78,39 +78,39 @@
   </div>
 
   <!-- Desktop table -->
-  <div class="bg-white rounded-xl shadow-sm border overflow-hidden hidden md:block">
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden hidden md:block">
     <div class="overflow-x-auto">
       <table class="w-full">
-        <thead class="bg-gray-50 border-b">
+        <thead class="bg-gray-50 dark:bg-gray-800 border-b dark:border-gray-700">
           <tr>
-            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500">名称</th>
-            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500">来源</th>
-            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500">分组/类型</th>
-            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500">大区域</th>
-            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500">小区域</th>
-            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500">状态</th>
+            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500">名称</th>
+            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500">来源</th>
+            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500">分组/类型</th>
+            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500">大区域</th>
+            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500">小区域</th>
+            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500">状态</th>
           </tr>
         </thead>
         <tbody class="divide-y">
           <template x-for="d in allDevices" :key="d.uid">
-            <tr class="hover:bg-gray-50">
-              <td class="px-4 py-3 text-sm font-medium text-gray-800" x-text="d.name"></td>
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+              <td class="px-4 py-3 text-sm font-medium text-gray-800 dark:text-gray-100" x-text="d.name"></td>
               <td class="px-4 py-3">
                 <span x-show="d.source == 'group'" class="inline-flex px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full">分组</span>
                 <span x-show="d.source == 'main'" class="inline-flex px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">系统</span>
               </td>
-              <td class="px-4 py-3 text-sm text-gray-600" x-text="d.group_type"></td>
-              <td class="px-4 py-3 text-sm text-gray-600" x-text="d.area || '-'"></td>
-              <td class="px-4 py-3 text-sm text-gray-600" x-text="d.sub_location || '-'"></td>
+              <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300" x-text="d.group_type"></td>
+              <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300" x-text="d.area || '-'"></td>
+              <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-300" x-text="d.sub_location || '-'"></td>
               <td class="px-4 py-3">
                 <span x-show="d.status == '正常'" class="inline-flex px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">正常</span>
                 <span x-show="d.status == '故障'" class="inline-flex px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">故障</span>
-                <span x-show="d.status == '报废'" class="inline-flex px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">报废</span>
+                <span x-show="d.status == '报废'" class="inline-flex px-2 py-0.5 bg-gray-100 text-gray-500 dark:text-gray-400 dark:text-gray-500 text-xs rounded-full">报废</span>
               </td>
             </tr>
           </template>
           <tr x-show="allDevices.length === 0">
-            <td colspan="6" class="px-4 py-12 text-center text-gray-400">暂无设备</td>
+            <td colspan="6" class="px-4 py-12 text-center text-gray-400 dark:text-gray-500">暂无设备</td>
           </tr>
         </tbody>
       </table>
@@ -120,20 +120,20 @@
   <!-- Mobile cards -->
   <div class="md:hidden space-y-3">
     <template x-for="d in allDevices" :key="d.uid">
-      <div class="bg-white rounded-xl shadow-sm border p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-4">
         <div class="flex items-start justify-between mb-2">
-          <span class="font-medium text-gray-800" x-text="d.name"></span>
+          <span class="font-medium text-gray-800 dark:text-gray-100" x-text="d.name"></span>
           <span x-show="d.status == '正常'" class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">正常</span>
           <span x-show="d.status == '故障'" class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">故障</span>
-          <span x-show="d.status == '报废'" class="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">报废</span>
+          <span x-show="d.status == '报废'" class="px-2 py-0.5 bg-gray-100 text-gray-500 dark:text-gray-400 dark:text-gray-500 text-xs rounded-full">报废</span>
         </div>
-        <div class="text-sm text-gray-500 space-y-1">
+        <div class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 space-y-1">
           <div>来源: <span x-text="d.source == 'group' ? '分组' : '系统'"></span> / <span x-text="d.group_type"></span></div>
           <div>位置: <span x-text="(d.area || '-') + ' → ' + (d.sub_location || '-')"></span></div>
         </div>
       </div>
     </template>
-    <div x-show="allDevices.length === 0" class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">暂无设备</div>
+    <div x-show="allDevices.length === 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-12 text-center text-gray-400 dark:text-gray-500">暂无设备</div>
   </div>
 </div>
 {% endblock %}

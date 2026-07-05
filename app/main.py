@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import Response
+from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from app.database import init_db
-from app.routers import pages, devices, locations, groups, stats
+from app.routers import pages, devices, locations, groups, stats, auth, users, logs
+from app.auth import verify_token
 import os
 import secrets
 import base64
@@ -19,39 +20,47 @@ app.include_router(devices.router)
 app.include_router(locations.router)
 app.include_router(groups.router)
 app.include_router(stats.router)
+app.include_router(auth.router)
+app.include_router(users.router)
+app.include_router(logs.router)
+
+PUBLIC_PATHS = {"/login", "/api/auth/login"}
+
+EXEMPT_PREFIXES = ("/static",)
 
 
-def _parse_basic_auth(header: str) -> Optional[tuple]:
-    """解析 Authorization: Basic <base64> 头，返回 (user, password) 或 None。"""
-    try:
-        scheme, _, token = header.partition(" ")
-        if scheme.lower() != "basic" or not token:
-            return None
-        decoded = base64.b64decode(token).decode("utf-8")
-        user, _, password = decoded.partition(":")
-        return user, password
-    except Exception:
-        return None
+def _is_exempt(path: str) -> bool:
+    if path in PUBLIC_PATHS:
+        return True
+    for prefix in EXEMPT_PREFIXES:
+        if path.startswith(prefix):
+            return True
+    return False
 
 
 @app.middleware("http")
-async def basic_auth_middleware(request: Request, call_next):
-    auth_user = os.environ.get("AUTH_USER")
-    auth_password = os.environ.get("AUTH_PASSWORD")
-    # 未配置凭据则跳过认证
-    if not auth_user or not auth_password:
+async def auth_middleware(request: Request, call_next):
+    if _is_exempt(request.url.path):
         return await call_next(request)
-    provided = _parse_basic_auth(request.headers.get("authorization", ""))
-    # 用 compare_digest 防时序攻击；用户名和密码都要匹配
-    ok = (
-        provided is not None
-        and secrets.compare_digest(provided[0], auth_user)
-        and secrets.compare_digest(provided[1], auth_password)
-    )
-    if not ok:
-        return Response(
-            "Unauthorized",
-            status_code=401,
-            headers={"WWW-Authenticate": 'Basic realm="device-management"'},
+
+    token = request.cookies.get("token")
+    if not token:
+        if request.url.path.startswith("/api/"):
+            return JSONResponse({"detail": "未登录"}, status_code=401)
+        return RedirectResponse("/login", status_code=302)
+
+    payload = verify_token(token)
+    if not payload:
+        response = (
+            RedirectResponse("/login", status_code=302)
+            if not request.url.path.startswith("/api/")
+            else JSONResponse({"detail": "登录已过期"}, status_code=401)
         )
+        response.delete_cookie("token")
+        return response
+
+    request.state.user_id = int(payload.get("sub", 0))
+    request.state.user_role = payload.get("role", "guest")
+    request.state.username = payload.get("username", "")
+
     return await call_next(request)

@@ -4,22 +4,22 @@
 {% block content %}
 <div class="max-w-3xl mx-auto" x-data='deviceForm({{ device.id if device else "null" }}, {{ field_values_json | tojson if device else "{}" }})'>
   <div class="flex items-center gap-3 mb-6">
-    <a href="/devices" class="text-gray-400 hover:text-gray-600">
+    <a href="/devices" class="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-300">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
     </a>
-    <h1 class="text-2xl font-bold text-gray-800">{{ '编辑设备' if device else '添加设备' }}</h1>
+    <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">{{ '编辑设备' if device else '添加设备' }}</h1>
   </div>
 
-  <form @submit.prevent="submit" novalidate class="bg-white rounded-xl shadow-sm border p-6 space-y-5">
+  <form @submit.prevent="submit" novalidate class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-6 space-y-5">
     <!-- 基础信息 -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div class="sm:col-span-2">
-        <label class="block text-sm font-medium text-gray-700 mb-1">设备名称 <span class="text-red-500">*</span></label>
-        <input type="text" x-model="form.name" required class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500" placeholder="例如：压缩机-01">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">设备名称 <span class="text-red-500">*</span></label>
+        <input type="text" x-model="form.name" required class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm focus:ring-1 focus:ring-primary-500 focus:border-primary-500" placeholder="例如：压缩机-01">
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">设备类型 <span class="text-red-500">*</span></label>
-        <select x-model="form.device_type_id" @change="onTypeChange" required class="w-full px-3 py-2 border rounded-lg text-sm">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">设备类型 <span class="text-red-500">*</span></label>
+        <select x-model="form.device_type_id" @change="onTypeChange" required class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
           <option value="">选择类型</option>
           {% for t in types %}
           <option value="{{ t.id }}">{{ t.name }}</option>
@@ -27,8 +27,8 @@
         </select>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">子类型</label>
-        <select x-model="form.sub_type_id" class="w-full px-3 py-2 border rounded-lg text-sm">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">子类型</label>
+        <select x-model="form.sub_type_id" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
           <option value="">无</option>
           <template x-for="st in subTypes" :key="st.id">
             <option :value="st.id" x-text="st.name"></option>
@@ -40,8 +40,8 @@
     <!-- 位置 -->
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">大区域 <span class="text-red-500">*</span></label>
-        <select x-model="form.area_id" @change="onAreaChange" required class="w-full px-3 py-2 border rounded-lg text-sm">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">大区域 <span class="text-red-500">*</span></label>
+        <select x-model="form.area_id" @change="onAreaChange" required class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
           <option value="">选择大区域</option>
           {% for a in areas %}
           <option value="{{ a.id }}">{{ a.name }}</option>
@@ -49,8 +49,8 @@
         </select>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">小区域 <span class="text-red-500">*</span></label>
-        <select x-model="form.sub_location_id" required class="w-full px-3 py-2 border rounded-lg text-sm">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">小区域 <span class="text-red-500">*</span></label>
+        <select x-model="form.sub_location_id" required class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
           <option value="">选择小区域</option>
           <template x-for="sl in subLocations" :key="sl.id">
             <option :value="sl.id" x-text="sl.name"></option>
@@ -61,16 +61,16 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">状态</label>
-        <select x-model="form.status" class="w-full px-3 py-2 border rounded-lg text-sm">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">状态</label>
+        <select x-model="form.status" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
           <option value="正常">正常</option>
           <option value="故障">故障</option>
           <option value="报废">报废</option>
         </select>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">额定功率 (W)</label>
-        <input type="number" step="0.01" x-model="form.power_rating" class="w-full px-3 py-2 border rounded-lg text-sm">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">额定功率 (W)</label>
+        <input type="number" step="0.01" x-model="form.power_rating" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
       </div>
 
     </div>
@@ -78,20 +78,20 @@
     <!-- 自定义字段 (动态) -->
     <template x-if="fields.length > 0">
       <div>
-        <h3 class="text-sm font-medium text-gray-700 mb-3 border-b pb-2">自定义参数</h3>
+        <h3 class="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3 border-b dark:border-gray-700 pb-2">自定义参数</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <template x-for="f in fields" :key="f.id">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
                 <span x-text="f.name"></span>
-                <span x-show="f.unit" class="text-gray-400" x-text="`(${f.unit})`"></span>
+                <span x-show="f.unit" class="text-gray-400 dark:text-gray-500" x-text="`(${f.unit})`"></span>
                 <span x-show="f.required" class="text-red-500">*</span>
               </label>
               <template x-if="f.type == 'number'">
-                <input type="number" step="0.01" x-model="fieldValues[f.id]" class="w-full px-3 py-2 border rounded-lg text-sm">
+                <input type="number" step="0.01" x-model="fieldValues[f.id]" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
               </template>
               <template x-if="f.type != 'number'">
-                <input type="text" x-model="fieldValues[f.id]" class="w-full px-3 py-2 border rounded-lg text-sm">
+                <input type="text" x-model="fieldValues[f.id]" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
               </template>
             </div>
           </template>
@@ -100,15 +100,15 @@
     </template>
 
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">备注</label>
-      <textarea x-model="form.notes" rows="3" class="w-full px-3 py-2 border rounded-lg text-sm"></textarea>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">备注</label>
+      <textarea x-model="form.notes" rows="3" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm"></textarea>
     </div>
 
     <div class="flex items-center gap-3 pt-2">
       <button type="submit" class="px-6 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 transition-colors">
         {{ '保存修改' if device else '添加设备' }}
       </button>
-      <a href="/devices" class="px-6 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">取消</a>
+      <a href="/devices" class="px-6 py-2 border dark:border-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">取消</a>
     </div>
   </form>
 </div>
@@ -119,17 +119,17 @@
 function deviceForm(editId, fieldValuesData) {
   const isEdit = editId !== null;
   const serverFieldValues = fieldValuesData || {};
+  const deviceData = {{ device_data | tojson }};
   return {
     form: {
-      name: '{{ device.name if device else '' }}',
-      device_type_id: '{{ device.device_type_id if device else '' }}',
-      sub_type_id: '{{ device.sub_type_id if device else '' }}',
-      area_id: '{{ device.sub_location.area_id if device else '' }}',
-      sub_location_id: '{{ device.sub_location_id if device else '' }}',
-      status: '{{ device.status if device else '正常' }}',
-      power_rating: '{{ device.power_rating if device else '0' }}',
-      purchase_date: '{{ device.purchase_date if device else '' }}',
-      notes: '{{ device.notes if device else '' }}',
+      name: deviceData ? (deviceData.name || '') : '',
+      device_type_id: deviceData ? (deviceData.device_type_id || '') : '',
+      sub_type_id: deviceData ? (deviceData.sub_type_id || '') : '',
+      area_id: deviceData ? (deviceData.area_id || '') : '',
+      sub_location_id: deviceData ? (deviceData.sub_location_id || '') : '',
+      status: deviceData ? (deviceData.status || '正常') : '正常',
+      power_rating: deviceData ? (deviceData.power_rating || 0) : 0,
+      notes: deviceData ? (deviceData.notes || '') : '',
     },
     subTypes: [],
     subLocations: [],
@@ -169,10 +169,6 @@ function deviceForm(editId, fieldValuesData) {
       const types = await r.json();
       const t = types.find(x => x.id == this.form.device_type_id);
       this.fields = t ? (t.fields || []) : [];
-      // map fieldValues from server when editing
-      if (isEdit) {
-        this.loadFieldValues();
-      }
     },
 
     async loadSubLocations() {
@@ -213,7 +209,6 @@ function deviceForm(editId, fieldValuesData) {
         sub_type_id: this.form.sub_type_id ? parseInt(this.form.sub_type_id) : null,
         sub_location_id: parseInt(this.form.sub_location_id),
         power_rating: parseFloat(this.form.power_rating) || 0,
-        purchase_date: this.form.purchase_date || null,
         field_values: this.fieldValues,
       };
 

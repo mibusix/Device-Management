@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.database import get_db
-from app.models import Device, GroupDevice, SubLocation, DeviceType, DeviceGroup
+from app.models import Device, GroupDevice, SubLocation, DeviceType, DeviceGroup, User
+from app.auth import get_current_user
 
 router = APIRouter(prefix="/api/stats")
 
@@ -14,6 +15,7 @@ def get_all_devices(
     group_type: str = "",
     status: str = "",
     area_id: int = None,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     all_devices = []
@@ -32,8 +34,7 @@ def get_all_devices(
             except (IndexError, ValueError):
                 pass
         if search:
-            # search in field_values JSON (simple approach)
-            all_g = q.order_by(GroupDevice.id.desc()).all()
+            all_g = q.order_by(GroupDevice.id.desc()).limit(500).all()
             for g in all_g:
                 fv = g.field_values or {}
                 name = next((v for v in fv.values() if v), f"分组设备#{g.id}")

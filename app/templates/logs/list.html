@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}操作日志 - 设备管理系统{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto" x-data="logManager()">
+  <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">操作日志</h1>
+
+  <!-- Filters -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-4 mb-5">
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div>
+        <label class="block text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">搜索</label>
+        <input type="text" x-model="filter.search" @keyup.enter="loadData" placeholder="用户名/目标名称"
+               class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">操作类型</label>
+        <select x-model="filter.action" @change="loadData" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
+          <option value="">全部</option>
+          <option value="create">创建</option>
+          <option value="update">修改</option>
+          <option value="delete">删除</option>
+          <option value="login">登录</option>
+          <option value="login_failed">登录失败</option>
+          <option value="logout">登出</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">目标类型</label>
+        <select x-model="filter.target_type" @change="loadData" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
+          <option value="">全部</option>
+          <option value="device">系统设备</option>
+          <option value="group_device">分组设备</option>
+          <option value="area">大区域</option>
+          <option value="sub_location">子区域</option>
+          <option value="group">分组</option>
+          <option value="group_field">分组字段</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">操作人</label>
+        <select x-model="filter.user_id" @change="loadData" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
+          <option value="">全部</option>
+          <template x-for="u in userList" :key="u.id">
+            <option :value="u.id" x-text="u.username"></option>
+          </template>
+        </select>
+      </div>
+      <div class="flex items-end">
+        <button @click="loadData" class="w-full py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm transition-colors">
+          查询
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop table -->
+  <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden hidden md:block">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50 dark:bg-gray-800 border-b dark:border-gray-700">
+          <tr>
+            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500">时间</th>
+            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500">操作人</th>
+            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500">操作</th>
+            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500">目标</th>
+            <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 dark:text-gray-500">IP</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          <template x-for="log in items" :key="log.id">
+            <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+              <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 whitespace-nowrap" x-text="log.created_at"></td>
+              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200" x-text="log.username || '-'"></td>
+              <td class="px-4 py-3">
+                <span x-show="log.action === 'create'" class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">创建</span>
+                <span x-show="log.action === 'update'" class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">修改</span>
+                <span x-show="log.action === 'delete'" class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">删除</span>
+                <span x-show="log.action === 'login'" class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded-full">登录</span>
+                <span x-show="log.action === 'login_failed'" class="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full">登录失败</span>
+                <span x-show="log.action === 'logout'" class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">登出</span>
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-200">
+                <span x-text="typeLabel(log.target_type)"></span>
+                <span x-show="log.target_name" x-text="': ' + log.target_name" class="text-gray-500 dark:text-gray-400 dark:text-gray-500"></span>
+              </td>
+              <td class="px-4 py-3 text-xs text-gray-400 dark:text-gray-500 font-mono" x-text="log.ip_address || '-'"></td>
+            </tr>
+          </template>
+          <tr x-show="items.length === 0">
+            <td colspan="5" class="px-4 py-12 text-center text-gray-400 dark:text-gray-500">暂无日志</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Mobile cards -->
+  <div class="md:hidden space-y-3">
+    <template x-for="log in items" :key="log.id">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-4">
+        <div class="flex items-center justify-between mb-2">
+          <span x-show="log.action === 'create'" class="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">创建</span>
+          <span x-show="log.action === 'update'" class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">修改</span>
+          <span x-show="log.action === 'delete'" class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">删除</span>
+          <span x-show="log.action === 'login'" class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded-full">登录</span>
+          <span x-show="log.action === 'login_failed'" class="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full">登录失败</span>
+          <span x-show="log.action === 'logout'" class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">登出</span>
+          <span class="text-xs text-gray-400 dark:text-gray-500" x-text="log.created_at"></span>
+        </div>
+        <div class="text-sm text-gray-600 dark:text-gray-300">
+          <div x-text="typeLabel(log.target_type) + ': ' + (log.target_name || '-')"></div>
+          <div class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            操作人: <span x-text="log.username || '-'"></span>
+            <span x-show="log.ip_address" x-text="' · IP: ' + log.ip_address"></span>
+          </div>
+        </div>
+      </div>
+    </template>
+    <div x-show="items.length === 0" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-12 text-center text-gray-400 dark:text-gray-500">暂无日志</div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="flex items-center justify-between mt-4 text-sm">
+    <div class="text-gray-500 dark:text-gray-400 dark:text-gray-500">共 <span x-text="total" class="font-medium"></span> 条</div>
+    <div class="flex gap-2">
+      <button @click="goPage(page - 1)" :disabled="page <= 1"
+              class="px-3 py-1.5 border dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">上一页</button>
+      <span class="px-3 py-1.5 text-gray-600 dark:text-gray-300">第 <span x-text="page"></span> 页</span>
+      <button @click="goPage(page + 1)" :disabled="page * page_size >= total"
+              class="px-3 py-1.5 border dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">下一页</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function logManager() {
+  return {
+    items: [],
+    total: 0,
+    page: 1,
+    page_size: 20,
+    userList: [],
+    filter: { search: '', action: '', target_type: '', user_id: '' },
+
+    typeLabelMap: {
+      device: '系统设备',
+      group_device: '分组设备',
+      area: '大区域',
+      sub_location: '子区域',
+      group: '分组',
+      group_field: '分组字段',
+    },
+
+    typeLabel(t) { return this.typeLabelMap[t] || t; },
+
+    async init() {
+      try {
+        const r = await fetch('/api/users/');
+        if (r.ok) this.userList = await r.json();
+      } catch (e) {}
+      this.loadData();
+    },
+
+    async loadData() {
+      const p = new URLSearchParams();
+      p.set('page', this.page);
+      p.set('page_size', this.page_size);
+      if (this.filter.search) p.set('search', this.filter.search);
+      if (this.filter.action) p.set('action', this.filter.action);
+      if (this.filter.target_type) p.set('target_type', this.filter.target_type);
+      if (this.filter.user_id) p.set('user_id', this.filter.user_id);
+
+      const r = await fetch(`/api/logs/?${p}`);
+      if (r.ok) {
+        const d = await r.json();
+        this.items = d.items;
+        this.total = d.total;
+        this.page = d.page;
+      }
+    },
+
+    goPage(n) {
+      this.page = n;
+      this.loadData();
+      window.scrollTo(0, 0);
+    }
+  }
+}
+</script>
+{% endblock %}

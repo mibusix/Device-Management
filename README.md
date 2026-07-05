@@ -19,44 +19,66 @@
 
 ```bash
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8080
 ```
 
-浏览器打开 `http://localhost:8000`。
+浏览器打开 `http://localhost:8080`，默认账户 `admin` / `admin123`。
 
 ## 项目结构
 
 ```
 ├── app/
-│   ├── main.py              # 入口
+│   ├── main.py              # 入口 + Cookie JWT 认证中间件
 │   ├── config.py            # 配置
-│   ├── database.py          # SQLite 连接 + 预设分组种子
-│   ├── models.py            # 数据模型
+│   ├── database.py          # SQLite 连接 + 预设分组种子 + 自动迁移
+│   ├── models.py            # 数据模型（User/OperationLog + 设备模型）
+│   ├── auth.py              # JWT 认证、密码哈希、权限控制
 │   ├── routers/
 │   │   ├── pages.py         # 页面路由
 │   │   ├── devices.py       # 系统设备 API
 │   │   ├── locations.py     # 位置 API
 │   │   ├── groups.py        # 分组管理 API
-│   │   └── stats.py         # 统一设备统计 API
+│   │   ├── stats.py         # 统一设备统计 API
+│   │   ├── auth.py          # 登录/登出 API
+│   │   ├── users.py         # 用户管理 API（管理员）
+│   │   └── logs.py          # 操作日志 API
 │   └── templates/
-│       ├── base.html        # 布局（响应式导航）
+│       ├── base.html        # 布局（响应式导航 + 用户菜单）
+│       ├── login.html       # 登录页
 │       ├── dashboard.html
 │       ├── devices/
 │       ├── groups/
 │       ├── locations/
-│       └── tools/           # 小工具（能耗/压力/电学计算）
+│       ├── tools/           # 小工具（能耗/压力/电学计算）
+│       ├── users/           # 用户管理
+│       └── logs/            # 操作日志
 ├── data/
 │   └── devices.db           # SQLite 数据库（自动创建）
 ├── requirements.txt
 └── README.md
 ```
 
+## 用户系统
+
+内置三级角色用户管理，所有操作均有日志记录：
+
+| 角色 | 查看 | 创建/修改/删除 | 用户管理 | 日志查看 |
+|------|:----:|:----------:|:------:|:------:|
+| 管理员 (admin) | ✅ | ✅ | ✅ | ✅ |
+| 普通用户 (user) | ✅ | ✅ | ❌ | ✅ |
+| 访客 (guest) | ✅ | ❌ | ❌ | ❌ |
+
+首次启动自动创建 `admin/admin123` 管理员账户，登录后可在「用户管理」中创建其他用户。
+
 ## 使用流程
 
-1. **位置管理** → 添加大区域（A区/B区），再添加小区域（机房/夹层）
-2. **设备管理** → 分组会预设 4 类（多联机/控制保护器/压缩机/水泵），进入分组 → 管理字段模板 → 添加设备
-3. **设备统计** → 统一查看所有系统设备
-4. **小工具** → 能耗估算、压力换算、电阻/电流/电压计算
+1. **登录** → 访问 `/login`，默认管理员 `admin` / `admin123`
+2. **位置管理** → 添加大区域（A区/B区），再添加小区域（机房/夹层）
+3. **设备管理** → 分组会预设 4 类（多联机/控制保护器/压缩机/水泵），进入分组 → 管理字段模板 → 添加设备
+4. **设备统计** → 统一查看所有系统设备
+5. **小工具** → 能耗估算、压力换算、电阻/电流/电压计算
+6. **用户管理**（管理员） → 创建/编辑/禁用用户
+7. **操作日志** → 查看所有增删改操作记录
 
 ## 截图
 
@@ -104,61 +126,60 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 **开发环境启动：**
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 **生产环境启动：**
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+uvicorn app.main:app --host 0.0.0.0 --port 8080 --workers 4
 ```
 
-启动后，浏览器访问 `http://localhost:8000` 即可使用系统。
+启动后，浏览器访问 `http://localhost:8080` 即可使用系统，默认管理员 `admin` / `admin123`。
 
 ### 环境变量说明
 
 | 变量名 | 必填 | 默认值 | 说明 |
 |--------|------|--------|------|
-| `AUTH_USER` | 否 | 无 | 基本认证用户名。设置后启用 HTTP 基本认证，保护系统访问。 |
-| `AUTH_PASSWORD` | 否 | 无 | 基本认证密码。需与 `AUTH_USER` 同时设置才生效。 |
-| `SECRET_KEY` | 否 | `change-this-to-a-random-secret-key` | 应用密钥，用于安全相关功能。生产环境必须修改为随机强密码。 |
+| `SECRET_KEY` | 是 | 无 | JWT 签名密钥，启动前必须设置。建议随机生成：`export SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_hex(32))')"` |
 | `DATABASE_URL` | 否 | `sqlite:///data/devices.db` | 数据库连接字符串。默认使用 SQLite，可改为 PostgreSQL 等。 |
+| `HTTPS` | 否 | 空 | 设为 `1` 时 Cookie 启用 `secure` 标志，生产环境需开启。 |
 
 **示例配置（.env 文件）：**
 ```env
-AUTH_USER=admin
-AUTH_PASSWORD=your_secure_password
 SECRET_KEY=your_random_secret_key_here
 DATABASE_URL=sqlite:///data/devices.db
+HTTPS=1
 ```
 
 ### 验证部署
 
 1. **服务状态检查**
    ```bash
-   curl http://localhost:8000
+   curl http://localhost:8080
    ```
-   返回 HTML 内容表示服务正常运行。
+   返回 302 重定向（跳转到登录页）表示服务正常运行。
 
 2. **API 端点测试**
    ```bash
-   # 测试统计 API
-   curl http://localhost:8000/api/stats/devices
-   
-   # 测试设备列表 API
-   curl http://localhost:8000/api/devices/
+   # 测试统计 API（需先登录获取 cookie）
+   curl -c /tmp/cookies.txt -X POST http://localhost:8080/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"username":"admin","password":"admin123"}'
+   curl -b /tmp/cookies.txt http://localhost:8080/api/stats/devices
    ```
 
-3. **认证测试**（如果启用了认证）
+3. **未登录保护测试**
    ```bash
-   curl -u admin:password http://localhost:8000
+   curl -i http://localhost:8080/api/devices/
+   # 返回 401 Unauthorized
    ```
 
 ### 常见问题
 
 **Q1: 启动时报错 "Address already in use"**
-- 端口 8000 被占用，修改端口号：
+- 端口 8080 被占用，修改端口号：
   ```bash
-  uvicorn app.main:app --host 0.0.0.0 --port 8080
+  uvicorn app.main:app --host 0.0.0.0 --port 9000
   ```
 
 **Q2: 数据库文件在哪里？**
@@ -176,8 +197,9 @@ DATABASE_URL=sqlite:///data/devices.db
   uvicorn app.main:app --host 0.0.0.0 --port 9000
   ```
 
-**Q6: 忘记认证密码怎么办？**
-- 重新设置 `AUTH_USER` 和 `AUTH_PASSWORD` 环境变量，重启服务即可。
+**Q6: 忘记管理员密码怎么办？**
+- 删除 `data/devices.db` 文件，重启服务即可重建数据库并恢复默认 `admin`/`admin123` 账户。
+- **注意：此操作会清除所有数据，仅适用于初始部署场景。**
 
 **Q7: 如何备份数据？**
 - 直接备份 `data/devices.db` 文件即可。SQLite 数据库是单文件，便于备份和迁移。

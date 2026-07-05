@@ -13,11 +13,47 @@ class DeviceStatus(str, enum.Enum):
     SCRAPPED = "报废"
 
 
+class UserRole(str, enum.Enum):
+    ADMIN = "admin"
+    USER = "user"
+    GUEST = "guest"
+
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), nullable=False, unique=True)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(String(20), default=UserRole.USER.value)
+    is_active = Column(Integer, default=1)
+    must_change_password = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class OperationLog(Base):
+    __tablename__ = "operation_logs"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    username = Column(String(50), default="")
+    action = Column(String(20), nullable=False)
+    target_type = Column(String(50), nullable=False)
+    target_id = Column(Integer, nullable=True)
+    target_name = Column(String(200), default="")
+    detail = Column(JSON, default=dict)
+    ip_address = Column(String(50), default="")
+    created_at = Column(DateTime, default=datetime.now)
+
+    user = relationship("User")
+
+
 class Area(Base):
     __tablename__ = "areas"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False, unique=True)
     description = Column(Text, default="")
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
 
     sub_locations = relationship("SubLocation", back_populates="area", cascade="all, delete-orphan")
 
@@ -28,6 +64,8 @@ class SubLocation(Base):
     name = Column(String(100), nullable=False)
     area_id = Column(Integer, ForeignKey("areas.id"), nullable=False, index=True)
     description = Column(Text, default="")
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
 
     area = relationship("Area", back_populates="sub_locations")
     devices = relationship("Device", back_populates="sub_location")
@@ -60,7 +98,7 @@ class DeviceTypeField(Base):
     id = Column(Integer, primary_key=True, index=True)
     device_type_id = Column(Integer, ForeignKey("device_types.id"), nullable=False)
     field_name = Column(String(100), nullable=False)
-    field_type = Column(String(20), default="text")  # text, number
+    field_type = Column(String(20), default="text")
     unit = Column(String(50), default="")
     required = Column(Integer, default=0)
     sort_order = Column(Integer, default=0)
@@ -81,6 +119,8 @@ class Device(Base):
 
     notes = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.now)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
 
     device_type = relationship("DeviceType", back_populates="devices")
     sub_type = relationship("DeviceTypeSubType", back_populates="devices")
@@ -137,6 +177,8 @@ class DeviceGroup(Base):
     description = Column(Text, default="")
     sort_order = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.now)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
 
     fields = relationship("GroupField", back_populates="group",
                           cascade="all, delete-orphan",
@@ -169,6 +211,8 @@ class GroupDevice(Base):
     notes = Column(Text, default="")
     field_values = Column(JSON, default=dict)
     created_at = Column(DateTime, default=datetime.now)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
+    updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
 
     group = relationship("DeviceGroup", back_populates="devices")
     area = relationship("Area")

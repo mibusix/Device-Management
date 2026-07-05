@@ -4,7 +4,7 @@
 {% block content %}
 <div class="max-w-5xl mx-auto" x-data="locationManager()">
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-    <h1 class="text-2xl font-bold text-gray-800">位置管理</h1>
+    <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-100">位置管理</h1>
     <button @click="showAddArea = true" class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
       添加大区域
@@ -13,19 +13,19 @@
 
   <div class="space-y-4">
     {% for a in areas %}
-    <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 overflow-hidden">
       <div class="px-5 py-4 bg-gray-50 flex items-center justify-between">
         <div>
-          <h2 class="font-semibold text-gray-800">{{ a.name }}</h2>
-          {% if a.description %}<p class="text-sm text-gray-500">{{ a.description }}</p>{% endif %}
+          <h2 class="font-semibold text-gray-800 dark:text-gray-100">{{ a.name }}</h2>
+          {% if a.description %}<p class="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">{{ a.description }}</p>{% endif %}
         </div>
         <div class="flex items-center gap-2">
           <button data-id="{{ a.id }}" data-name="{{ a.name }}" data-desc="{{ a.description or '' }}"
                  @click="editArea($el.dataset.id, $el.dataset.name, $el.dataset.desc)"
-                 class="text-sm text-primary-600 hover:text-primary-700">编辑</button>
+                 class="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">编辑</button>
           <button data-id="{{ a.id }}" data-name="{{ a.name }}"
                  @click="deleteArea($el.dataset.id, $el.dataset.name)"
-                 class="text-sm text-red-600 hover:text-red-700">删除</button>
+                 class="text-sm text-red-600 dark:text-red-400 hover:text-red-700">删除</button>
           <button data-id="{{ a.id }}" data-name="{{ a.name }}"
                  @click="addSub($el.dataset.id, $el.dataset.name)"
                  class="ml-2 px-3 py-1 bg-primary-600 text-white text-xs rounded-lg hover:bg-primary-700">+ 添加子区域</button>
@@ -34,69 +34,72 @@
       {% if a.sub_locations %}
       <div class="divide-y">
         {% for sl in a.sub_locations %}
-        <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50">
+        <div class="px-5 py-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700">
           <div>
-            <span class="text-sm font-medium text-gray-700">{{ sl.name }}</span>
-            {% if sl.description %}<span class="text-xs text-gray-400 ml-2">{{ sl.description }}</span>{% endif %}
+            <span class="text-sm font-medium text-gray-700 dark:text-gray-200">{{ sl.name }}</span>
+            {% if sl.description %}<span class="text-xs text-gray-400 dark:text-gray-500 ml-2">{{ sl.description }}</span>{% endif %}
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs text-gray-400" x-text="await deviceCount({{ sl.id }}) + ' 台设备'">0 台设备</span>
+            <span class="text-xs text-gray-400 dark:text-gray-500" x-text="deviceCount({{ sl.id }}) + ' 台设备'">0 台设备</span>
             <button data-id="{{ sl.id }}" data-area-id="{{ a.id }}" data-name="{{ sl.name }}" data-desc="{{ sl.description or '' }}"
                    @click="editSub($el.dataset.id, $el.dataset.areaId, $el.dataset.name, $el.dataset.desc)"
-                   class="text-xs text-primary-600 hover:text-primary-700">编辑</button>
+                   class="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">编辑</button>
             <button data-id="{{ sl.id }}" data-name="{{ sl.name }}"
                    @click="deleteSub($el.dataset.id, $el.dataset.name)"
-                   class="text-xs text-red-600 hover:text-red-700">删除</button>
+                   class="text-xs text-red-600 dark:text-red-400 hover:text-red-700">删除</button>
           </div>
         </div>
         {% endfor %}
       </div>
       {% else %}
-      <div class="px-5 py-6 text-center text-sm text-gray-400">暂无子区域，点击上方按钮添加</div>
+      <div class="px-5 py-6 text-center text-sm text-gray-400 dark:text-gray-500">暂无子区域，点击上方按钮添加</div>
       {% endif %}
     </div>
     {% else %}
-    <div class="bg-white rounded-xl shadow-sm border p-12 text-center text-gray-400">暂无区域，点击右上角添加</div>
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border dark:border-gray-700 p-12 text-center text-gray-400 dark:text-gray-500">暂无区域，点击右上角添加</div>
     {% endfor %}
   </div>
 
   <!-- Add/Edit Area Modal -->
   <div x-show="showAddArea || showEditArea" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50" @click.self="showAddArea = false; showEditArea = false">
-    <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
       <h3 class="font-semibold text-lg mb-4" x-text="showEditArea ? '编辑大区域' : '添加大区域'"></h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">名称</label>
-          <input type="text" x-model="areaForm.name" class="w-full px-3 py-2 border rounded-lg text-sm">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">名称</label>
+          <input type="text" x-model="areaForm.name" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm">
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">描述</label>
-          <textarea x-model="areaForm.description" rows="2" class="w-full px-3 py-2 border rounded-lg text-sm"></textarea>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">描述</label>
+          <textarea x-model="areaForm.description" rows="2" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm"></textarea>
         </div>
       </div>
       <div class="flex justify-end gap-3 mt-6">
-        <button @click="showAddArea = false; showEditArea = false" class="px-4 py-2 border rounded-lg text-sm">取消</button>
+        <button @click="showAddArea = false; showEditArea = false" class="px-4 py-2 border dark:border-gray-700 rounded-lg text-sm">取消</button>
         <button @click="saveArea()" class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm">保存</button>
       </div>
     </div>
   </div>
 
-  <!-- Add Sub Modal -->
-  <div x-show="showAddSub" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50" @click.self="showAddSub = false">
-    <div class="bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
-      <h3 class="font-semibold text-lg mb-4">添加子区域 — <span x-text="currentAreaName" class="text-primary-600"></span></h3>
+  <!-- Add/Edit Sub Modal -->
+  <div x-show="showAddSub || showEditSub" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50" @click.self="showAddSub = false; showEditSub = false">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
+      <h3 class="font-semibold text-lg mb-4">
+        <span x-show="showEditSub">编辑子区域</span>
+        <span x-show="!showEditSub">添加子区域 — <span x-text="currentAreaName" class="text-primary-600 dark:text-primary-400"></span></span>
+      </h3>
       <div class="space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">名称</label>
-          <input type="text" x-model="subForm.name" class="w-full px-3 py-2 border rounded-lg text-sm" placeholder="例如：机房、夹层">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">名称</label>
+          <input type="text" x-model="subForm.name" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm" placeholder="例如：机房、夹层">
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">描述</label>
-          <textarea x-model="subForm.description" rows="2" class="w-full px-3 py-2 border rounded-lg text-sm"></textarea>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">描述</label>
+          <textarea x-model="subForm.description" rows="2" class="w-full px-3 py-2 border dark:border-gray-700 rounded-lg text-sm"></textarea>
         </div>
       </div>
       <div class="flex justify-end gap-3 mt-6">
-        <button @click="showAddSub = false" class="px-4 py-2 border rounded-lg text-sm">取消</button>
+        <button @click="showAddSub = false; showEditSub = false" class="px-4 py-2 border dark:border-gray-700 rounded-lg text-sm">取消</button>
         <button @click="saveSub()" class="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm">保存</button>
       </div>
     </div>
@@ -112,10 +115,20 @@ function locationManager() {
     showEditArea: false,
     editAreaId: null,
     showAddSub: false,
+    showEditSub: false,
+    editSubId: null,
     currentAreaId: null,
     currentAreaName: '',
     areaForm: { name: '', description: '' },
     subForm: { name: '', description: '' },
+    deviceCounts: {},
+
+    async init() {
+      try {
+        const r = await fetch('/api/devices/counts-by-location');
+        if (r.ok) this.deviceCounts = await r.json();
+      } catch (e) {}
+    },
 
     editArea(id, name, desc) {
       this.editAreaId = id;
@@ -149,23 +162,21 @@ function locationManager() {
     },
 
     saveSub() {
-      fetch('/api/locations/sub-locations', {
-        method: 'POST',
+      const isEdit = this.showEditSub;
+      const url = isEdit ? `/api/locations/sub-locations/${this.editSubId}` : '/api/locations/sub-locations';
+      const method = isEdit ? 'PUT' : 'POST';
+      fetch(url, {
+        method,
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({...this.subForm, area_id: this.currentAreaId}),
       }).then(r => r.json()).then(() => location.reload());
     },
 
     editSub(id, areaId, name, desc) {
-      // simplified: just prompt for new name
-      const newName = prompt('编辑子区域名称：', name);
-      if (newName && newName !== name) {
-        fetch(`/api/locations/sub-locations/${id}`, {
-          method: 'PUT',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({name: newName, area_id: areaId, description: desc}),
-        }).then(r => r.json()).then(() => location.reload());
-      }
+      this.editSubId = id;
+      this.currentAreaId = areaId;
+      this.subForm = { name, description: desc || '' };
+      this.showEditSub = true;
     },
 
     deleteSub(id, name) {
@@ -175,13 +186,8 @@ function locationManager() {
       }
     },
 
-    async deviceCount(slId) {
-      try {
-        const r = await fetch(`/api/devices/by-location/${slId}`);
-        const devices = await r.json();
-        // update the DOM directly
-        return devices.length;
-      } catch { return '?'; }
+    deviceCount(slId) {
+      return this.deviceCounts[slId] || 0;
     }
   }
 }
