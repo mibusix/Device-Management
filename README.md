@@ -110,7 +110,13 @@ uvicorn app.main:app --host 0.0.0.0 --port 8080
 
 ## 截图
 
-（暂无）
+<p align="center">
+  <img src="screenshots/仪表盘.png" alt="仪表盘" width="48%">
+  <img src="screenshots/设备管理.png" alt="设备管理" width="48%">
+</p>
+<p align="center">
+  <img src="screenshots/设备统计.png" alt="设备统计" width="48%">
+</p>
 
 ---
 
