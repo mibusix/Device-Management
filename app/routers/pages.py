@@ -76,10 +76,12 @@ def device_edit_form(request: Request, device_id: int, db: Session = Depends(get
         raise HTTPException(404, "设备不存在")
     types = db.query(DeviceType).all()
     areas = db.query(Area).all()
+    field_values = {fv.field_id: fv.value for fv in device.field_values}
     return templates.TemplateResponse(request, "devices/form.html", {
         "types": types,
         "areas": areas,
         "device": device,
+        "field_values_json": field_values,
     })
 
 

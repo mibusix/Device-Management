@@ -2,7 +2,7 @@
 {% block title %}{{ '编辑设备' if device else '添加设备' }}{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto" x-data="deviceForm({{ device.id if device else 'null' }})">
+<div class="max-w-3xl mx-auto" x-data='deviceForm({{ device.id if device else "null" }}, {{ field_values_json | tojson if device else "{}" }})'>
   <div class="flex items-center gap-3 mb-6">
     <a href="/devices" class="text-gray-400 hover:text-gray-600">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
@@ -116,8 +116,9 @@
 
 {% block scripts %}
 <script>
-function deviceForm(editId) {
+function deviceForm(editId, fieldValuesData) {
   const isEdit = editId !== null;
+  const serverFieldValues = fieldValuesData || {};
   return {
     form: {
       name: '{{ device.name if device else '' }}',
@@ -183,8 +184,8 @@ function deviceForm(editId) {
     },
 
     async loadFieldValues() {
-      // Field values are loaded on init via data attributes in a real scenario
-      // For simplicity, we rely on the form submission to send them
+      // 从服务端渲染的 JSON 回填已有字段值（编辑场景）
+      this.fieldValues = { ...serverFieldValues };
     },
 
     onTypeChange() {

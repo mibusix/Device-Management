@@ -76,7 +76,7 @@ def create_device(data: DeviceCreate, db: Session = Depends(get_db)):
     db.flush()
 
     for field_id, value in data.field_values.items():
-        if value:
+        if value is not None and str(value) != '':
             fv = DeviceFieldValue(device_id=device.id, field_id=int(field_id), value=str(value))
             db.add(fv)
 
@@ -103,7 +103,7 @@ def update_device(device_id: int, data: DeviceUpdate, db: Session = Depends(get_
         DeviceFieldValue.device_id == device_id
     ).delete()
     for field_id, value in data.field_values.items():
-        if value:
+        if value is not None and str(value) != '':
             fv = DeviceFieldValue(device_id=device.id, field_id=int(field_id), value=str(value))
             db.add(fv)
 
