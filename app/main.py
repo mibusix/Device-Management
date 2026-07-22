@@ -29,7 +29,7 @@ app.include_router(users.router)
 app.include_router(logs.router)
 app.include_router(admin.router)
 
-PUBLIC_PATHS = {"/login", "/api/auth/login"}
+PUBLIC_PATHS = {"/login", "/api/auth/login", "/api/version"}
 
 EXEMPT_PREFIXES = ("/static",)
 
