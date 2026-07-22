@@ -44,7 +44,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - SECRET_KEY=${SECRET_KEY}
       - HTTPS=0
     volumes:
       - ./data:/app/data
@@ -165,6 +165,31 @@ curl -b /tmp/cookies.txt http://localhost:8080/api/stats/devices
 # 未登录返回 401
 curl -i http://localhost:8080/api/devices/
 ```
+
+## 测试
+
+```bash
+pip install -r requirements-dev.txt
+export SECRET_KEY="$(openssl rand -hex 32)"
+pytest -q
+```
+
+CI 已配置在 `.github/workflows/ci.yml`，向 `master` 分支提交或发起 PR 时会自动运行测试。
+
+## 版本与更新
+
+- 当前版本：`1.0.0`（见项目根目录 `VERSION` 文件）
+- 版本接口：`GET /api/version`
+
+### 更新记录
+
+**v1.0.0**
+
+- 安全：Cookie JWT 认证、CSRF 防护、登录限速（5 次/5 分钟）、退出后 Token 黑名单。
+- 数据：SQLite 外键约束、UTC 时间戳、管理员清理过期黑名单/旧日志接口。
+- 功能：设备统计/系统设备/分组设备列表分页，新增 `GET /api/devices/{id}` 接口。
+- 质量：新增 `pytest` 测试集（23 条用例）、GitHub Actions CI、Docker 镜像默认非 root 运行。
+- 工程：新增 `AGENTS.md`、`VERSION`、Tailwind/Alpine CDN 版本固定 + SRI。
 
 ## FAQ
 

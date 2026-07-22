@@ -198,7 +198,8 @@ function deviceForm(editId, fieldValuesData) {
 
     async submit() {
       for (const f of this.fields) {
-        if (f.required && !this.fieldValues[f.id]) {
+        const v = this.fieldValues[f.id];
+        if (f.required && (v === '' || v == null)) {
           alert(`请填写「${f.name}」`);
           return;
         }

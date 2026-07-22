@@ -282,8 +282,9 @@ function groupManager() {
 
     async selectGroup(g) {
       this.selectedGroup = g;
-      const r = await fetch(`/api/groups/${g.id}/devices`);
-      this.devices = await r.json();
+      const r = await fetch(`/api/groups/${g.id}/devices?page=1&page_size=500`);
+      const data = await r.json();
+      this.devices = data.items;
     },
 
     // --- Group CRUD ---
@@ -303,7 +304,7 @@ function groupManager() {
     },
 
     async deleteGroup(g) {
-      if (!confirm(`确定删除分组「${g.name}」吗？其下所有设备也会删除。`)) return;
+      if (!confirm('确定删除分组「' + escapeJs(g.name) + '」吗？其下所有设备也会删除。')) return;
       await fetch(`/api/groups/${g.id}`, { method: 'DELETE' });
       if (this.selectedGroup?.id === g.id) { this.selectedGroup = null; this.devices = []; }
       await this.loadGroups();
@@ -408,7 +409,8 @@ function groupManager() {
       const group = this.selectedGroup;
       // check required
       for (const f of group.fields) {
-        if (f.required && !this.deviceForm.field_values[f.name]) {
+        const v = this.deviceForm.field_values[f.name];
+        if (f.required && (v === '' || v == null)) {
           alert(`请填写「${f.name}」`);
           return;
         }

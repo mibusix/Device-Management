@@ -1,10 +1,10 @@
 from sqlalchemy import (
-    Column, Integer, String, Float, ForeignKey, Text, Enum, DateTime, Date, JSON
+    Column, Integer, String, Float, ForeignKey, Text, DateTime, Date, JSON
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class DeviceStatus(str, enum.Enum):
@@ -27,8 +27,8 @@ class User(Base):
     role = Column(String(20), default=UserRole.USER.value)
     is_active = Column(Integer, default=1)
     must_change_password = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.now)
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class OperationLog(Base):
@@ -42,9 +42,17 @@ class OperationLog(Base):
     target_name = Column(String(200), default="")
     detail = Column(JSON, default=dict)
     ip_address = Column(String(50), default="")
-    created_at = Column(DateTime, default=datetime.now)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User")
+
+
+class TokenBlacklist(Base):
+    __tablename__ = "token_blacklist"
+    id = Column(Integer, primary_key=True, index=True)
+    jti = Column(String(64), nullable=False, unique=True, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class Area(Base):
@@ -118,7 +126,7 @@ class Device(Base):
     power_rating = Column(Float, default=0)
 
     notes = Column(Text, default="")
-    created_at = Column(DateTime, default=datetime.now)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
 
@@ -149,7 +157,7 @@ class EnergyRecord(Base):
     energy_kwh = Column(Float, nullable=False)
     record_date = Column(Date, nullable=False)
     notes = Column(Text, default="")
-    created_at = Column(DateTime, default=datetime.now)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     device = relationship("Device", back_populates="energy_records")
 
@@ -165,9 +173,7 @@ class MultiSplitEnergy(Base):
     indoor_temp = Column(Float, nullable=True)
     record_date = Column(Date, nullable=False)
     notes = Column(Text, default="")
-    created_at = Column(DateTime, default=datetime.now)
-
-    device = relationship("Device")
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class DeviceGroup(Base):
@@ -176,7 +182,7 @@ class DeviceGroup(Base):
     name = Column(String(100), nullable=False, unique=True)
     description = Column(Text, default="")
     sort_order = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.now)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
 
@@ -210,7 +216,7 @@ class GroupDevice(Base):
     power_rating = Column(Float, default=0)
     notes = Column(Text, default="")
     field_values = Column(JSON, default=dict)
-    created_at = Column(DateTime, default=datetime.now)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
     updated_by = Column(Integer, ForeignKey("users.id"), nullable=True, default=None)
 

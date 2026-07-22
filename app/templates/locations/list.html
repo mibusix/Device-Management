@@ -137,7 +137,7 @@ function locationManager() {
     },
 
     deleteArea(id, name) {
-      if (confirm(`确定删除大区域「${name}」吗？其下所有子区域也会被删除。`)) {
+      if (confirm('确定删除大区域「' + escapeJs(name) + '」吗？其下所有子区域也会被删除。')) {
         fetch(`/api/locations/areas/${id}`, { method: 'DELETE' })
           .then(r => r.json()).then(() => location.reload());
       }
@@ -180,7 +180,7 @@ function locationManager() {
     },
 
     deleteSub(id, name) {
-      if (confirm(`确定删除子区域「${name}」吗？`)) {
+      if (confirm('确定删除子区域「' + escapeJs(name) + '」吗？')) {
         fetch(`/api/locations/sub-locations/${id}`, { method: 'DELETE' })
           .then(r => r.json()).then(() => location.reload());
       }

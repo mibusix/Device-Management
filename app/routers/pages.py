@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -8,7 +8,6 @@ from app.models import (
     Device, DeviceType, Area, SubLocation, DeviceStatus,
     GroupDevice, DeviceGroup, User,
 )
-from app.auth import get_optional_user
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -21,7 +20,7 @@ def _user_context(request: Request, db: Session = None):
     user_id = getattr(request.state, "user_id", None)
     if not user_id:
         return {"current_user": None}
-    user = db.query(User).get(int(user_id))
+    user = db.get(User, int(user_id))
     if user and user.is_active:
         return {"current_user": user}
     return {"current_user": None}
@@ -34,49 +33,93 @@ def login_page(request: Request):
 
 @router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db)):
-    sys_total = db.query(Device).count()
-    sys_normal = db.query(Device).filter(Device.status == DeviceStatus.NORMAL.value).count()
-    sys_fault = db.query(Device).filter(Device.status == DeviceStatus.FAULT.value).count()
-    sys_scrapped = db.query(Device).filter(Device.status == DeviceStatus.SCRAPPED.value).count()
+    # 系统设备状态聚合：用一次 group_by 代替 4 次 COUNT
+    sys_status_counts = dict(
+        db.query(Device.status, func.count(Device.id)).group_by(Device.status).all()
+    )
+    sys_total = sum(sys_status_counts.values())
+    sys_normal = sys_status_counts.get(DeviceStatus.NORMAL.value, 0)
+    sys_fault = sys_status_counts.get(DeviceStatus.FAULT.value, 0)
+    sys_scrapped = sys_status_counts.get(DeviceStatus.SCRAPPED.value, 0)
 
-    grp_total = db.query(GroupDevice).count()
-    grp_normal = db.query(GroupDevice).filter(GroupDevice.status == "正常").count()
-    grp_fault = db.query(GroupDevice).filter(GroupDevice.status == "故障").count()
-    grp_scrapped = db.query(GroupDevice).filter(GroupDevice.status == "报废").count()
+    # 分组设备状态聚合
+    grp_status_counts = dict(
+        db.query(GroupDevice.status, func.count(GroupDevice.id)).group_by(GroupDevice.status).all()
+    )
+    grp_total = sum(grp_status_counts.values())
+    grp_normal = grp_status_counts.get("正常", 0)
+    grp_fault = grp_status_counts.get("故障", 0)
+    grp_scrapped = grp_status_counts.get("报废", 0)
 
-    # 按类型统计：系统设备类型 + 分组设备类型
-    type_stats = []
+    # 按类型统计：系统设备类型
     all_types = db.query(DeviceType).all()
-    for t in all_types:
-        total = db.query(Device).filter(Device.device_type_id == t.id).count()
-        if total > 0:
-            n = db.query(Device).filter(
-                Device.device_type_id == t.id, Device.status == DeviceStatus.NORMAL.value
-            ).count()
-            type_stats.append({"name": t.name, "total": total, "normal": n, "type_id": t.id})
+    type_total = dict(
+        db.query(Device.device_type_id, func.count(Device.id))
+        .group_by(Device.device_type_id)
+        .all()
+    )
+    type_normal = dict(
+        db.query(Device.device_type_id, func.count(Device.id))
+        .filter(Device.status == DeviceStatus.NORMAL.value)
+        .group_by(Device.device_type_id)
+        .all()
+    )
+    type_stats = [
+        {"name": t.name, "total": type_total.get(t.id, 0), "normal": type_normal.get(t.id, 0), "type_id": t.id}
+        for t in all_types
+        if type_total.get(t.id, 0) > 0
+    ]
 
+    # 按分组统计
     all_groups = db.query(DeviceGroup).all()
-    group_stats = []
-    for g in all_groups:
-        total = db.query(GroupDevice).filter(GroupDevice.group_id == g.id).count()
-        if total > 0:
-            n = db.query(GroupDevice).filter(
-                GroupDevice.group_id == g.id, GroupDevice.status == "正常"
-            ).count()
-            group_stats.append({"name": g.name, "total": total, "normal": n, "type_id": None})
+    group_total = dict(
+        db.query(GroupDevice.group_id, func.count(GroupDevice.id))
+        .group_by(GroupDevice.group_id)
+        .all()
+    )
+    group_normal = dict(
+        db.query(GroupDevice.group_id, func.count(GroupDevice.id))
+        .filter(GroupDevice.status == "正常")
+        .group_by(GroupDevice.group_id)
+        .all()
+    )
+    group_stats = [
+        {"name": g.name, "total": group_total.get(g.id, 0), "normal": group_normal.get(g.id, 0), "type_id": None}
+        for g in all_groups
+        if group_total.get(g.id, 0) > 0
+    ]
 
-    # 按区域统计：系统设备 + 分组设备
+    # 按区域统计：系统设备 + 分组设备，避免每个区域一次 COUNT
     areas = db.query(Area).all()
-    area_data = []
+    sub_to_area = {}
     for a in areas:
-        ids = [sl.id for sl in a.sub_locations]
-        if ids:
-            sys_cnt = db.query(Device).filter(Device.sub_location_id.in_(ids)).count()
-            grp_cnt = db.query(GroupDevice).filter(GroupDevice.sub_location_id.in_(ids)).count()
-            cnt = sys_cnt + grp_cnt
-        else:
-            cnt = 0
-        area_data.append({"name": a.name, "count": cnt, "area_id": a.id})
+        for sl in a.sub_locations:
+            sub_to_area[sl.id] = a.id
+
+    area_counts = {a.id: 0 for a in areas}
+    if sub_to_area:
+        sub_ids = list(sub_to_area.keys())
+        sys_by_sub = dict(
+            db.query(Device.sub_location_id, func.count(Device.id))
+            .filter(Device.sub_location_id.in_(sub_ids))
+            .group_by(Device.sub_location_id)
+            .all()
+        )
+        grp_by_sub = dict(
+            db.query(GroupDevice.sub_location_id, func.count(GroupDevice.id))
+            .filter(GroupDevice.sub_location_id.in_(sub_ids))
+            .group_by(GroupDevice.sub_location_id)
+            .all()
+        )
+        for sid, cnt in sys_by_sub.items():
+            area_counts[sub_to_area.get(sid)] += cnt
+        for sid, cnt in grp_by_sub.items():
+            area_counts[sub_to_area.get(sid)] += cnt
+
+    area_data = [
+        {"name": a.name, "count": area_counts[a.id], "area_id": a.id}
+        for a in areas
+    ]
 
     return templates.TemplateResponse(request, "dashboard.html", {
         **_user_context(request, db),
@@ -115,7 +158,7 @@ def device_add_form(request: Request, db: Session = Depends(get_db)):
 
 @router.get("/devices/{device_id}/edit", response_class=HTMLResponse)
 def device_edit_form(request: Request, device_id: int, db: Session = Depends(get_db)):
-    device = db.query(Device).get(device_id)
+    device = db.get(Device, device_id)
     if not device:
         raise HTTPException(404, "设备不存在")
     types = db.query(DeviceType).all()
@@ -145,7 +188,7 @@ def device_edit_form(request: Request, device_id: int, db: Session = Depends(get
 
 @router.get("/devices/{device_id}", response_class=HTMLResponse)
 def device_detail(request: Request, device_id: int, db: Session = Depends(get_db)):
-    device = db.query(Device).get(device_id)
+    device = db.get(Device, device_id)
     if not device:
         raise HTTPException(404, "设备不存在")
     return templates.TemplateResponse(request, "devices/detail.html", {

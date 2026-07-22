@@ -163,7 +163,7 @@ function userManager() {
     },
 
     async deleteUser(u) {
-      if (!confirm(`确定删除用户 "${u.username}" 吗？`)) return;
+      if (!confirm('确定删除用户 "' + escapeJs(u.username) + '" 吗？')) return;
       try {
         const r = await fetch(`/api/users/${u.id}`, { method: 'DELETE' });
         if (!r.ok) { const d = await r.json(); alert(d.detail || '删除失败'); return; }

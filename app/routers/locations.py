@@ -20,6 +20,11 @@ class SubLocationCreate(BaseModel):
     description: str = ""
 
 
+def _validate_area(db: Session, area_id: int):
+    if not db.get(Area, area_id):
+        raise HTTPException(400, "大区域不存在")
+
+
 @router.get("/areas")
 def list_areas(
     current_user: User = Depends(get_current_user),
@@ -65,7 +70,7 @@ def update_area(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
-    area = db.query(Area).get(area_id)
+    area = db.get(Area, area_id)
     if not area:
         raise HTTPException(404, "区域不存在")
     area.name = data.name
@@ -87,13 +92,14 @@ def delete_area(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
-    area = db.query(Area).get(area_id)
+    area = db.get(Area, area_id)
     if not area:
         raise HTTPException(404, "区域不存在")
     sub_ids = [sl.id for sl in area.sub_locations]
     device_count = db.query(Device).filter(Device.sub_location_id.in_(sub_ids)).count() if sub_ids else 0
     group_device_count = db.query(GroupDevice).filter(GroupDevice.sub_location_id.in_(sub_ids)).count() if sub_ids else 0
-    if device_count > 0 or group_device_count > 0:
+    group_device_area_count = db.query(GroupDevice).filter(GroupDevice.area_id == area_id).count()
+    if device_count > 0 or group_device_count > 0 or group_device_area_count > 0:
         raise HTTPException(400, "该区域下存在关联的设备，无法删除")
     name = area.name
     db.delete(area)
@@ -113,6 +119,7 @@ def create_sub(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
+    _validate_area(db, data.area_id)
     sl = SubLocation(name=data.name, area_id=data.area_id, description=data.description, created_by=current_user.id)
     db.add(sl)
     db.flush()
@@ -132,9 +139,10 @@ def update_sub(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
-    sl = db.query(SubLocation).get(sub_id)
+    sl = db.get(SubLocation, sub_id)
     if not sl:
         raise HTTPException(404, "子区域不存在")
+    _validate_area(db, data.area_id)
     sl.name = data.name
     sl.area_id = data.area_id
     sl.description = data.description
@@ -155,7 +163,7 @@ def delete_sub(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
-    sl = db.query(SubLocation).get(sub_id)
+    sl = db.get(SubLocation, sub_id)
     if not sl:
         raise HTTPException(404, "子区域不存在")
     device_count = db.query(Device).filter(Device.sub_location_id == sub_id).count()

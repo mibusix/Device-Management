@@ -1,4 +1,7 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import secrets
+import time
+from threading import Lock
 
 from jose import JWTError, jwt
 import bcrypt
@@ -10,6 +13,68 @@ from app.database import get_db
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
+
+CSRF_COOKIE_NAME = "csrf_token"
+CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}
+CSRF_EXEMPT_PATHS = {"/login", "/api/auth/login"}
+
+
+def generate_csrf_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def set_csrf_cookie(response: Response, token: str):
+    response.set_cookie(
+        key=CSRF_COOKIE_NAME,
+        value=token,
+        httponly=False,
+        max_age=ACCESS_TOKEN_EXPIRE_HOURS * 3600,
+        samesite="lax",
+        secure=HTTPS_ENV,
+        path="/",
+    )
+
+
+def verify_csrf(request: Request) -> bool:
+    if request.method in CSRF_SAFE_METHODS or request.url.path in CSRF_EXEMPT_PATHS:
+        return True
+    cookie = request.cookies.get(CSRF_COOKIE_NAME)
+    header = request.headers.get("X-CSRF-Token") or request.headers.get("X-CSRFToken")
+    return bool(cookie and header and cookie == header)
+
+
+class _RateLimiter:
+    """进程内简单滑动窗口限流器。多进程/多 worker 场景下每个进程独立计数。"""
+
+    def __init__(self, max_attempts: int = 5, window_seconds: int = 300):
+        self.max_attempts = max_attempts
+        self.window = window_seconds
+        self._store: dict[str, list[float]] = {}
+        self._lock = Lock()
+
+    def is_allowed(self, key: str) -> bool:
+        now = time.monotonic()
+        with self._lock:
+            attempts = [t for t in self._store.get(key, []) if now - t < self.window]
+            if len(attempts) >= self.max_attempts:
+                self._store[key] = attempts
+                return False
+            attempts.append(now)
+            self._store[key] = attempts
+            return True
+
+
+_login_rate_limiter = _RateLimiter()
+
+
+def check_login_rate_limit(key: str) -> bool:
+    return _login_rate_limiter.is_allowed(key)
+
+
+def reset_login_rate_limit():
+    """测试用：清空登录限流计数。"""
+    with _login_rate_limiter._lock:
+        _login_rate_limiter._store.clear()
 
 
 def hash_password(password: str) -> str:
@@ -25,17 +90,52 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
-    to_encode.update({"exp": expire})
+    expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+    to_encode.update({
+        "exp": expire,
+        "jti": secrets.token_urlsafe(16),
+    })
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def verify_token(token: str):
+def verify_token(token: str, db: Session | None = None):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
     except JWTError:
         return None
+
+    # 检查 token 是否已被注销
+    jti = payload.get("jti")
+    if jti:
+        from app.models import TokenBlacklist
+        if db is None:
+            db = next(get_db())
+            try:
+                blacklisted = db.query(TokenBlacklist).filter(TokenBlacklist.jti == jti).first()
+            finally:
+                db.close()
+        else:
+            blacklisted = db.query(TokenBlacklist).filter(TokenBlacklist.jti == jti).first()
+        if blacklisted:
+            return None
+    return payload
+
+
+def blacklist_token(db: Session, payload: dict):
+    """退出时把 token jti 加入黑名单，使其立即失效。"""
+    jti = payload.get("jti")
+    exp = payload.get("exp")
+    if not jti or not exp:
+        return
+    expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
+    from app.models import TokenBlacklist
+    if not db.query(TokenBlacklist).filter(TokenBlacklist.jti == jti).first():
+        db.add(TokenBlacklist(jti=jti, expires_at=expires_at))
+
+
+def is_token_blacklisted(db: Session, jti: str) -> bool:
+    from app.models import TokenBlacklist
+    return db.query(TokenBlacklist).filter(TokenBlacklist.jti == jti).first() is not None
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)):
@@ -44,7 +144,7 @@ def get_current_user(request: Request, db: Session = Depends(get_db)):
     if not user_id:
         raise HTTPException(401, "未登录")
     from app.models import User
-    user = db.query(User).get(int(user_id))
+    user = db.get(User, int(user_id))
     if not user or not user.is_active:
         raise HTTPException(401, "用户不存在或已禁用")
     return user
@@ -56,7 +156,7 @@ def get_optional_user(request: Request, db: Session = Depends(get_db)):
     if not user_id:
         return None
     from app.models import User
-    user = db.query(User).get(int(user_id))
+    user = db.get(User, int(user_id))
     if not user or not user.is_active:
         return None
     return user

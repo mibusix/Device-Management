@@ -6,7 +6,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - SECRET_KEY=${SECRET_KEY}
       - HTTPS=0
     volumes:
       - ./data:/app/data
@@ -19,7 +19,7 @@ services:
 #     ports:
 #       - "8080:8080"
 #     environment:
-#       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+#       - SECRET_KEY=${SECRET_KEY}
 #       - HTTPS=0
 #     volumes:
 #       - ./data:/app/data

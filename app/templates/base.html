@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}设备管理系统{% endblock %}</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.10" integrity="sha384-VK3iZSOy03XNa6Ba48af6ubHywenceWJjdXhhrvfhdaDgDGHRCt47O6A6d8fjdVu" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.12/dist/cdn.min.js" integrity="sha384-pb6hrQvo4s23cEUFtj0CZkzGE3jyK3pj26RIupXXxhSrrcUA/Cn0lZgcCrGH0t6L" crossorigin="anonymous"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -233,6 +233,32 @@
     window.getTheme = function() {
       return localStorage.getItem('theme') || 'system'
     }
+    window.escapeJs = function(s) {
+      // 把字符串中的反斜杠、引号、反引号、换行转义，防止插入 JS 字符串/模板字面量时被打断
+      return String(s).replace(/[\\'"`\n\r]/g, '\\$&')
+    }
+
+    // 自动为 POST/PUT/DELETE/PATCH 请求附加 CSRF token
+    ;(function() {
+      function getCsrfToken() {
+        const m = document.cookie.match(new RegExp('(^| )csrf_token=([^;]+)'))
+        return m ? decodeURIComponent(m[2]) : ''
+      }
+      const originalFetch = window.fetch
+      window.fetch = function(url, options) {
+        options = options || {}
+        const method = (options.method || 'GET').toUpperCase()
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+          options.headers = options.headers || {}
+          if (options.headers instanceof Headers) {
+            options.headers.set('X-CSRF-Token', getCsrfToken())
+          } else {
+            options.headers['X-CSRF-Token'] = getCsrfToken()
+          }
+        }
+        return originalFetch(url, options)
+      }
+    })()
     // system preference change
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
       if (getTheme() === 'system') setTheme('system')

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional
 from app.database import get_db
-from app.models import Device, DeviceFieldValue, DeviceStatus, SubLocation, User
+from app.models import Device, DeviceFieldValue, DeviceStatus, DeviceType, DeviceTypeSubType, SubLocation, User
 from app.auth import get_current_user, require_role, create_log
+from app.pagination import paginate
 
 router = APIRouter(prefix="/api/devices")
 
@@ -25,12 +26,71 @@ class DeviceUpdate(DeviceCreate):
     pass
 
 
+_VALID_DEVICE_STATUSES = {s.value for s in DeviceStatus}
+
+
+def _validate_device_payload(db: Session, data: DeviceCreate):
+    """把非法的系统设备输入从 500 转成 422/400。"""
+    device_type = db.get(DeviceType, data.device_type_id)
+    if not device_type:
+        raise HTTPException(400, "设备类型不存在")
+
+    sub_location = db.get(SubLocation, data.sub_location_id)
+    if not sub_location:
+        raise HTTPException(400, "位置不存在")
+
+    if data.sub_type_id is not None:
+        sub_type = db.get(DeviceTypeSubType, data.sub_type_id)
+        if not sub_type or sub_type.device_type_id != data.device_type_id:
+            raise HTTPException(400, "子类型不存在或不属于该设备类型")
+
+    if data.status not in _VALID_DEVICE_STATUSES:
+        raise HTTPException(400, f"无效状态：{data.status}")
+
+    if data.field_values:
+        valid_field_ids = {f.id for f in device_type.fields}
+        for field_id in data.field_values.keys():
+            try:
+                fid = int(field_id)
+            except (ValueError, TypeError):
+                raise HTTPException(400, f"字段 ID 必须是整数：{field_id}")
+            if fid not in valid_field_ids:
+                raise HTTPException(400, f"字段不存在：{field_id}")
+
+
 @router.get("/")
 def list_devices(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=500),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return db.query(Device).order_by(Device.id.desc()).all()
+    devices = db.query(Device).order_by(Device.id.desc()).all()
+    return paginate(devices, page, page_size)
+
+
+@router.get("/{device_id}")
+def get_device(
+    device_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    device = db.get(Device, device_id)
+    if not device:
+        raise HTTPException(404, "设备不存在")
+    fields = {fv.field_id: fv.value for fv in device.field_values}
+    return {
+        "id": device.id,
+        "name": device.name,
+        "device_type_id": device.device_type_id,
+        "sub_type_id": device.sub_type_id,
+        "sub_location_id": device.sub_location_id,
+        "area_id": device.sub_location.area_id if device.sub_location else None,
+        "status": device.status,
+        "power_rating": device.power_rating,
+        "notes": device.notes,
+        "field_values": fields,
+    }
 
 
 @router.get("/by-type/{type_id}")
@@ -93,6 +153,7 @@ def create_device(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
+    _validate_device_payload(db, data)
     device = Device(
         name=data.name,
         device_type_id=data.device_type_id,
@@ -128,9 +189,10 @@ def update_device(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
-    device = db.query(Device).get(device_id)
+    device = db.get(Device, device_id)
     if not device:
         raise HTTPException(404, "设备不存在")
+    _validate_device_payload(db, data)
 
     device.name = data.name
     device.device_type_id = data.device_type_id
@@ -165,7 +227,7 @@ def delete_device(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
-    device = db.query(Device).get(device_id)
+    device = db.get(Device, device_id)
     if not device:
         raise HTTPException(404, "设备不存在")
     name = device.name
@@ -238,7 +300,7 @@ def get_sub_location(
     db: Session = Depends(get_db),
 ):
     from app.models import SubLocation
-    sl = db.query(SubLocation).get(sub_id)
+    sl = db.get(SubLocation, sub_id)
     if not sl:
         raise HTTPException(404)
     return {"id": sl.id, "name": sl.name, "area_id": sl.area_id, "area_name": sl.area.name}

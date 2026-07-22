@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from pydantic import BaseModel
 from typing import Optional
 from app.database import get_db
-from app.models import DeviceGroup, GroupField, GroupDevice, SubLocation, User
+from app.models import Area, DeviceGroup, GroupField, GroupDevice, SubLocation, User
 from app.auth import get_current_user, require_role, create_log
+from app.pagination import paginate
 
 router = APIRouter(prefix="/api/groups")
 
@@ -45,6 +46,32 @@ class DeviceCreate(BaseModel):
     power_rating: float = 0
     notes: str = ""
     field_values: dict = {}
+
+
+_VALID_GROUP_STATUSES = {"正常", "故障", "报废"}
+
+
+def _validate_group_device_payload(db: Session, data: DeviceCreate):
+    group = db.get(DeviceGroup, data.group_id)
+    if not group:
+        raise HTTPException(400, "分组不存在")
+    if data.area_id is not None:
+        area = db.get(Area, data.area_id)
+        if not area:
+            raise HTTPException(400, "大区域不存在")
+    if data.sub_location_id is not None:
+        sub = db.get(SubLocation, data.sub_location_id)
+        if not sub:
+            raise HTTPException(400, "子区域不存在")
+        if data.area_id is not None and sub.area_id != data.area_id:
+            raise HTTPException(400, "子区域不属于所选大区域")
+    if data.status not in _VALID_GROUP_STATUSES:
+        raise HTTPException(400, f"无效状态：{data.status}")
+    if data.field_values:
+        valid_names = {f.field_name for f in group.fields}
+        for name in data.field_values.keys():
+            if name not in valid_names:
+                raise HTTPException(400, f"字段不存在：{name}")
 
 
 @router.get("/")
@@ -96,7 +123,7 @@ def update_group(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
-    g = db.query(DeviceGroup).get(group_id)
+    g = db.get(DeviceGroup, group_id)
     if not g:
         raise HTTPException(404)
     g.name = data.name
@@ -118,7 +145,7 @@ def delete_group(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
-    g = db.query(DeviceGroup).get(group_id)
+    g = db.get(DeviceGroup, group_id)
     if not g:
         raise HTTPException(404)
     name = g.name
@@ -165,7 +192,7 @@ def update_field(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
-    f = db.query(GroupField).get(field_id)
+    f = db.get(GroupField, field_id)
     if not f:
         raise HTTPException(404)
     f.field_name = data.field_name
@@ -189,7 +216,7 @@ def delete_field(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
-    f = db.query(GroupField).get(field_id)
+    f = db.get(GroupField, field_id)
     if not f:
         raise HTTPException(404)
     name = f.field_name
@@ -212,7 +239,7 @@ def batch_update_fields(
     db: Session = Depends(get_db),
 ):
     """批量更新分组的字段：增量更新（按 id），重命名时同步迁移 GroupDevice.field_values 的 key"""
-    g = db.query(DeviceGroup).get(group_id)
+    g = db.get(DeviceGroup, group_id)
     if not g:
         raise HTTPException(404, "分组不存在")
 
@@ -279,6 +306,8 @@ def batch_update_fields(
 @router.get("/{group_id}/devices")
 def list_group_devices(
     group_id: int,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=500),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -302,7 +331,7 @@ def list_group_devices(
             "notes": d.notes,
             "field_values": fv,
         })
-    return result
+    return paginate(result, page, page_size)
 
 
 @router.post("/devices")
@@ -312,6 +341,7 @@ def create_group_device(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
+    _validate_group_device_payload(db, data)
     d = GroupDevice(
         group_id=data.group_id,
         area_id=data.area_id,
@@ -341,9 +371,10 @@ def update_group_device(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
-    d = db.query(GroupDevice).get(device_id)
+    d = db.get(GroupDevice, device_id)
     if not d:
         raise HTTPException(404)
+    _validate_group_device_payload(db, data)
     d.area_id = data.area_id
     d.sub_location_id = data.sub_location_id
     d.status = data.status
@@ -368,7 +399,7 @@ def delete_group_device(
     current_user: User = Depends(require_role("admin", "user")),
     db: Session = Depends(get_db),
 ):
-    d = db.query(GroupDevice).get(device_id)
+    d = db.get(GroupDevice, device_id)
     if not d:
         raise HTTPException(404)
     fv = d.field_values or {}

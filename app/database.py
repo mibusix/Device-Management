@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, text, inspect
+from sqlalchemy import create_engine, text, inspect, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.config import DATABASE_URL, BASE_DIR
 import os
@@ -9,6 +9,14 @@ os.makedirs(os.path.join(BASE_DIR, "data"), exist_ok=True)
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+
+@event.listens_for(engine, "connect")
+def _set_sqlite_pragma(dbapi_conn, connection_record):
+    """SQLite 默认不启用外键约束，必须在每个连接上执行 PRAGMA。"""
+    cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
 
 # DDL 标识符白名单：表名/列名只允许字母数字下划线，列类型只允许预定义集合
 _IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -137,6 +145,14 @@ def init_db():
             )
             db.add(guest)
 
+        db.commit()
+
+        # 清理过期的 token 黑名单
+        from datetime import datetime, timezone
+        from app.models import TokenBlacklist
+        db.query(TokenBlacklist).filter(
+            TokenBlacklist.expires_at < datetime.now(timezone.utc)
+        ).delete(synchronize_session=False)
         db.commit()
     finally:
         db.close()
